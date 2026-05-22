@@ -13,6 +13,8 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@expo-google-fonts/geist": "^0.4.2",
+    "@expo-google-fonts/geist-mono": "^0.4.2",
     "@react-navigation/native": "^7.0.0",
     "@rn-primitives/accordion": "^1.4.0",
     "@rn-primitives/alert-dialog": "^1.4.0",
@@ -42,6 +44,7 @@
     "clsx": "^2.1.1",
     "expo": "~55.0.19",
     "expo-constants": "~55.0.15",
+    "expo-font": "~55.0.8",
     "expo-haptics": "~55.0.14",
     "expo-linking": "~55.0.14",
     "expo-router": "~55.0.13",
@@ -71,7 +74,7 @@
     "@babel/core": "^7.26.0",
     "@types/react": "~19.2.10",
     "eslint": "^9.0.0",
-    "eslint-config-expo": "^56.0.4",
+    "eslint-config-expo": "~55.0.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.3",

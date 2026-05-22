@@ -11,6 +11,9 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --spacing-hairline: hairlineWidth();
+
+  --font-sans: Geist_400Regular;
+  --font-mono: GeistMono_400Regular;
 }
 
 @layer theme {
