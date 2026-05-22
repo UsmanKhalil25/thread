@@ -8,10 +8,8 @@ import { View } from 'react-native';
 function FeatureCard({ icon, label }: { icon: typeof Shield; label: string }) {
   return (
     <View className="border-border bg-muted flex-1 items-center justify-center gap-2 rounded-xl border py-4">
-      <Icon as={icon} className="text-muted-foreground size-5" />
-      <Text
-        className="text-muted-foreground text-xs"
-        style={{ fontFamily: 'GeistMono_400Regular' }}>
+      <Icon as={icon} className="size-5" />
+      <Text className="text-xs" style={{ fontFamily: 'GeistMono_400Regular' }}>
         {label}
       </Text>
     </View>
@@ -39,11 +37,13 @@ export default function WelcomeScreen() {
         </View>
       </View>
 
-      <View className="gap-4 pb-8 font-mono">
-        <Button>
-          <Text className="text-background text-base font-semibold">Get started</Text>
-          <Icon as={MoveRight} className="text-background size-5" />
-        </Button>
+      <View className="gap-4 pt-4 pb-8">
+        <Link href="/(onboarding)/privacy" asChild>
+          <Button>
+            <Text className="text-primary-foreground text-base font-semibold">Get started</Text>
+            <Icon as={MoveRight} className="text-primary-foreground size-5" />
+          </Button>
+        </Link>
         <Text className="text-muted-foreground text-center text-sm">
           Already have data?{' '}
           <Link href="/(onboarding)/privacy" className="text-primary underline">
