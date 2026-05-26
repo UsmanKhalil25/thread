@@ -8,6 +8,8 @@ import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { useUniwind } from 'uniwind';
 
@@ -37,10 +39,14 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={SCREEN_OPTIONS} />
-      <PortalHost />
-    </ThemeProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <KeyboardProvider>
+        <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+          <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+          <Stack screenOptions={SCREEN_OPTIONS} />
+          <PortalHost />
+        </ThemeProvider>
+      </KeyboardProvider>
+    </SafeAreaProvider>
   );
 }

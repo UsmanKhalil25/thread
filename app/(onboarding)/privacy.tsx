@@ -70,14 +70,12 @@ export default function PrivacyScreen() {
         </View>
       </View>
 
-      <View className="gap-4 pt-4 pb-8">
-        <Link href="/(onboarding)/suggestion" asChild>
-          <Button>
-            <Text className="text-primary-foreground text-base font-semibold">I understand</Text>
-            <Icon as={MoveRight} className="text-primary-foreground size-5" />
-          </Button>
-        </Link>
-      </View>
+      <Link href="/(onboarding)/suggestion" asChild>
+        <Button>
+          <Text className="text-primary-foreground text-base font-semibold">I understand</Text>
+          <Icon as={MoveRight} className="text-primary-foreground size-5" />
+        </Button>
+      </Link>
     </View>
   );
 }

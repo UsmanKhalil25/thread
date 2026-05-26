@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
         </View>
       </View>
 
-      <View className="gap-4 pt-4 pb-8">
+      <View className="gap-2">
         <Link href="/(onboarding)/privacy" asChild>
           <Button>
             <Text className="text-primary-foreground text-base font-semibold">Get started</Text>

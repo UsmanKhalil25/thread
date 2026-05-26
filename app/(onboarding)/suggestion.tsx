@@ -151,16 +151,12 @@ export default function SuggestionScreen() {
         </View>
       </View>
 
-      <View className="gap-4 pt-4 pb-8">
-        <Link href="/(chat)" asChild>
-          <Button>
-            <Text className="text-primary-foreground text-base font-semibold">
-              Download • 2.1 GB
-            </Text>
-            <Icon as={MoveRight} className="text-primary-foreground size-5" />
-          </Button>
-        </Link>
-      </View>
+      <Link href="/(chat)" asChild>
+        <Button>
+          <Text className="text-primary-foreground text-base font-semibold">Download • 2.1 GB</Text>
+          <Icon as={MoveRight} className="text-primary-foreground size-5" />
+        </Button>
+      </Link>
     </View>
   );
 }

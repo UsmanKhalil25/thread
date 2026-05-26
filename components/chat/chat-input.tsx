@@ -10,7 +10,7 @@ interface ChatInputProps extends TextInputProps {
 
 export function ChatInput({ onSend, onAttach, onMic, ...props }: ChatInputProps) {
   return (
-    <View className="px-2 py-5">
+    <View className="p-2">
       <View className="border-border bg-card flex-row items-center gap-3 rounded-3xl border px-4 py-3">
         <TextInput
           className="text-foreground flex-1 text-base"
