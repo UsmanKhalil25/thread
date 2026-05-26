@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": ["WebFetch(domain:reactnativereusables.com)", "WebFetch(domain:ui.shadcn.com)"]
-  },
-  "enabledPlugins": {
-    "expo@claude-plugins-official": true
-  }
-}
