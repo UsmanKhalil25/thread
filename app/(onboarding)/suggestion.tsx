@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
 import { Link } from 'expo-router';
 import { MoveRight } from 'lucide-react-native';
 import { View } from 'react-native';
@@ -52,9 +53,9 @@ function ModelAvatar({
   const isSm = size === 'sm';
   return (
     <View
-      className={'items-center justify-center rounded-lg ' + (isSm ? 'h-8 w-8' : 'h-10 w-10')}
+      className={cn('items-center justify-center rounded-lg', isSm ? 'h-8 w-8' : 'h-10 w-10')}
       style={{ backgroundColor: color }}>
-      <Text className={'font-semibold text-white ' + (isSm ? 'text-xs' : 'text-sm')}>
+      <Text className={cn('font-semibold text-white', isSm ? 'text-xs' : 'text-sm')}>
         {initial}
       </Text>
     </View>

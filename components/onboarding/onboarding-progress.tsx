@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
 import { View } from 'react-native';
 
 interface ProgressProps {
@@ -12,9 +13,10 @@ function Dot({ state }: { state: 'done' | 'active' | 'upcoming' }) {
   }
   return (
     <View
-      className={
-        'h-2 w-2 rounded-full ' + (state === 'done' ? 'bg-foreground' : 'bg-muted-foreground/30')
-      }
+      className={cn(
+        'h-2 w-2 rounded-full',
+        state === 'done' ? 'bg-foreground' : 'bg-muted-foreground/30'
+      )}
     />
   );
 }

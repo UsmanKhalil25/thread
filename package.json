@@ -9,6 +9,7 @@
     "web": "expo start -c --web",
     "clean": "rm -rf .expo node_modules",
     "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

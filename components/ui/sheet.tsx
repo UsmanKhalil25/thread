@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -35,7 +35,6 @@ SheetClose.displayName = 'SheetClose';
 // ─── Portal ──────────────────────────────────────────────────────────────────
 
 const SheetPortal = DialogPrimitive.Portal;
-SheetPortal.displayName = 'SheetPortal';
 
 // ─── Overlay ─────────────────────────────────────────────────────────────────
 
@@ -62,8 +61,8 @@ SheetOverlay.displayName = 'SheetOverlay';
 const sheetContentVariants = cva('bg-sidebar border-sidebar-border absolute flex flex-col border', {
   variants: {
     side: {
-      right: 'top-0 right-0 h-full w-3/4 border-l',
-      left: 'top-0 left-0 h-full w-3/4 border-r',
+      right: 'top-0 right-0 h-full w-[85%] border-l',
+      left: 'top-0 left-0 h-full w-[85%] border-r',
       top: 'top-0 left-0 h-auto w-full border-b',
       bottom: 'bottom-0 left-0 h-auto w-full border-t',
     },
@@ -99,12 +98,24 @@ function SheetContent({ className, side = 'right', children, ...props }: SheetCo
     <SheetPortal>
       <SheetOverlay />
       <DialogPrimitive.Content {...props} asChild>
-        <Animated.View
-          entering={ENTERING[side].duration(280)}
-          exiting={EXITING[side].duration(250)}
-          className={cn(sheetContentVariants({ side }), className)}>
-          {children}
-        </Animated.View>
+        {/*
+         * Plain View wrapper is intentional. DialogPrimitive.Content (asChild) uses
+         * Slot/cloneElement and forwards its nativeID onto the direct child. Reanimated
+         * uses nativeID internally to register `entering` animations — overwriting it
+         * silently breaks the enter animation with no error thrown. The wrapper View
+         * absorbs the dialog's nativeID + accessibility props; the Animated.View inside
+         * keeps its own uncontested nativeID so Reanimated can register SlideIn correctly.
+         * StyleSheet.absoluteFillObject ensures h-full in the CVA classes resolves
+         * against the full portal area.
+         */}
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+          <Animated.View
+            entering={ENTERING[side].duration(280)}
+            exiting={EXITING[side].duration(250)}
+            className={cn(sheetContentVariants({ side }), className)}>
+            {children}
+          </Animated.View>
+        </View>
       </DialogPrimitive.Content>
     </SheetPortal>
   );
