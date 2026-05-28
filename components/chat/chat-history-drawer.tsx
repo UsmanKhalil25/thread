@@ -1,23 +1,44 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
 import { Text } from '@/components/ui/text';
+import { THEME } from '@/lib/theme';
+import { FlashList } from '@shopify/flash-list';
 import { Database, Plus, Search, Settings, X } from 'lucide-react-native';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useCallback } from 'react';
+import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUniwind } from 'uniwind';
 
-const TODAY_CHATS = [
-  { id: '1', title: 'Rust async runtime', time: 'Now' },
-  { id: '2', title: 'Refactor auth middleware', time: '2h' },
+type Chat = {
+  id: string;
+  title: string;
+  time: string;
+  section: 'Today' | 'Earlier';
+  active?: boolean;
+};
+
+type ListItem = { type: 'header'; label: string } | { type: 'chat'; chat: Chat };
+
+const CHATS: Chat[] = [
+  { id: '1', title: 'Rust async runtime', time: 'Now', section: 'Today', active: true },
+  { id: '2', title: 'Refactor auth middleware', time: '2h', section: 'Today' },
+  { id: '3', title: 'Plan the week', time: 'Yesterday', section: 'Earlier' },
+  { id: '4', title: 'Translate Hokusai essay', time: 'Yesterday', section: 'Earlier' },
+  { id: '5', title: 'RAG over journal entries', time: 'Mon', section: 'Earlier' },
+  { id: '6', title: 'Dinner ideas with shiso', time: 'Mon', section: 'Earlier' },
+  { id: '7', title: 'Notes on Bach partitas', time: 'Sun', section: 'Earlier' },
 ];
 
-const EARLIER_CHATS = [
-  { id: '3', title: 'Plan the week', time: 'Yesterday' },
-  { id: '4', title: 'Translate Hokusai essay', time: 'Yesterday' },
-  { id: '5', title: 'RAG over journal entries', time: 'Mon' },
-  { id: '6', title: 'Dinner ideas with shiso', time: 'Mon' },
-  { id: '7', title: 'Notes on Bach partitas', time: 'Sun' },
+const LIST_DATA: ListItem[] = [
+  { type: 'header', label: 'Today' },
+  ...CHATS.filter((c) => c.section === 'Today').map((chat) => ({ type: 'chat' as const, chat })),
+  { type: 'header', label: 'Earlier' },
+  ...CHATS.filter((c) => c.section === 'Earlier').map((chat) => ({ type: 'chat' as const, chat })),
 ];
+
+const SAFE_AREA_EDGES = ['top', 'bottom'] as const;
 
 interface ChatHistoryDrawerProps {
   open: boolean;
@@ -28,6 +49,36 @@ interface ChatHistoryDrawerProps {
   onSettings?: () => void;
 }
 
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <Text className="text-muted-foreground px-1.5 pt-3 pb-1 font-mono text-[10.5px] font-medium tracking-[0.05em] uppercase">
+      {label}
+    </Text>
+  );
+}
+
+function ChatRow({ chat, onSelectChat }: { chat: Chat; onSelectChat?: (id: string) => void }) {
+  const handlePress = useCallback(() => onSelectChat?.(chat.id), [chat.id, onSelectChat]);
+  return (
+    <Pressable
+      onPress={handlePress}
+      className={`flex-row items-center justify-between rounded-lg px-2 py-2.5 ${
+        chat.active ? 'bg-card' : ''
+      }`}>
+      <Text
+        className={`flex-1 text-[13px] ${
+          chat.active ? 'text-foreground font-medium' : 'text-muted-foreground font-normal'
+        }`}
+        numberOfLines={1}>
+        {chat.title}
+      </Text>
+      <Text className="text-muted-foreground ml-2 shrink-0 font-mono text-[10.5px]">
+        {chat.time}
+      </Text>
+    </Pressable>
+  );
+}
+
 export function ChatHistoryDrawer({
   open,
   onClose,
@@ -36,78 +87,92 @@ export function ChatHistoryDrawer({
   onModels,
   onSettings,
 }: ChatHistoryDrawerProps) {
+  const { theme } = useUniwind();
+  const placeholderColor = THEME[theme ?? 'light'].mutedForeground;
+
+  const handleOpenChange = useCallback(
+    (v: boolean) => {
+      if (!v) onClose();
+    },
+    [onClose]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: ListItem }) => {
+      if (item.type === 'header') return <SectionHeader label={item.label} />;
+      return <ChatRow chat={item.chat} onSelectChat={onSelectChat} />;
+    },
+    [onSelectChat]
+  );
+
+  const getItemType = useCallback((item: ListItem) => item.type, []);
+  const keyExtractor = useCallback(
+    (item: ListItem) => (item.type === 'header' ? `header-${item.label}` : item.chat.id),
+    []
+  );
+
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="left">
-        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
-          <SheetHeader>
+        <SafeAreaView edges={SAFE_AREA_EDGES} style={{ flex: 1 }}>
+          <SheetHeader className="flex-row items-center px-2 pb-2">
             <Button variant="ghost" size="icon" onPress={onClose}>
               <Icon as={X} className="text-sidebar-foreground size-5" />
             </Button>
+            <View className="flex-1" />
+            <Pressable
+              onPress={onNewChat}
+              className="border-border bg-card flex-row items-center gap-1.5 rounded-lg border px-3 py-2 active:opacity-70">
+              <Icon as={Plus} className="text-foreground" size={12} />
+              <Text className="text-foreground text-[12px] font-medium">New chat</Text>
+            </Pressable>
           </SheetHeader>
 
-          <View className="border-border mx-4 mb-3 h-10 flex-row items-center gap-2 rounded-xl border px-3">
-            <Icon as={Search} className="text-muted-foreground size-4" />
+          <View className="border-border m-3 flex-row items-center justify-center gap-1 rounded border px-3">
+            <Icon as={Search} className="text-muted-foreground" size={14} />
             <TextInput
               placeholder="Search chats"
-              placeholderTextColor="#71717a"
-              className="text-sidebar-foreground flex-1 text-sm"
+              placeholderTextColor={placeholderColor}
+              className="text-sidebar-foreground flex-1 text-[12.5px]"
             />
           </View>
 
-          <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-            <Text className="text-muted-foreground pb-1 text-[10px] font-medium tracking-wider uppercase">
-              Today
-            </Text>
-            {TODAY_CHATS.map((chat) => (
-              <Pressable
-                key={chat.id}
-                onPress={() => onSelectChat?.(chat.id)}
-                className="flex-row items-center justify-between py-3">
-                <Text className="text-sidebar-foreground flex-1 text-sm">{chat.title}</Text>
-                <Text className="text-muted-foreground text-xs">{chat.time}</Text>
-              </Pressable>
-            ))}
+          <View style={{ flex: 1 }} className="px-3">
+            <FlashList
+              data={LIST_DATA}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              getItemType={getItemType}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
 
-            <Text className="text-muted-foreground pt-4 pb-1 text-[10px] font-medium tracking-wider uppercase">
-              Earlier
-            </Text>
-            {EARLIER_CHATS.map((chat) => (
-              <Pressable
-                key={chat.id}
-                onPress={() => onSelectChat?.(chat.id)}
-                className="flex-row items-center justify-between py-3">
-                <Text className="text-sidebar-foreground flex-1 text-sm">{chat.title}</Text>
-                <Text className="text-muted-foreground text-xs">{chat.time}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          <SheetFooter className="gap-0 pb-4">
+          <SheetFooter className="gap-0 px-2 pb-4">
             <Button
-              variant={'ghost'}
+              variant="ghost"
               onPress={onModels}
-              className="flex-row items-center justify-start gap-3 py-3">
-              <Icon as={Database} className="text-sidebar-foreground size-5" />
-              <Text className="text-sidebar-foreground text-sm font-medium">Models</Text>
+              className="flex-row items-center justify-start gap-2.5 py-2.5">
+              <Icon as={Database} className="text-sidebar-foreground" size={14} />
+              <Text className="text-foreground text-[13px]">Models</Text>
             </Button>
 
             <Button
-              variant={'ghost'}
-              onPress={onModels}
-              className="flex-row items-center justify-start gap-3 py-3">
-              <Icon as={Settings} className="text-sidebar-foreground size-5" />
-              <Text className="text-sidebar-foreground text-sm font-medium">Settings</Text>
+              variant="ghost"
+              onPress={onSettings}
+              className="flex-row items-center justify-start gap-2.5 py-2.5">
+              <Icon as={Settings} className="text-sidebar-foreground" size={14} />
+              <Text className="text-foreground text-[13px]">Settings</Text>
             </Button>
 
-            <View className="border-sidebar-border my-1 border-t" />
-            <View className="flex-row items-center gap-3 py-3">
-              <View className="bg-background h-10 w-10 items-center justify-center rounded-xl">
-                <Text className="text-foreground text-sm font-bold">SK</Text>
+            <Separator className="bg-sidebar-border my-1" />
+
+            <View className="flex-row items-center gap-2.5 px-3 py-2.5">
+              <View className="bg-muted h-[30px] w-[30px] items-center justify-center rounded-lg">
+                <Text className="text-foreground font-mono text-[11px] font-semibold">SK</Text>
               </View>
               <View className="gap-0.5">
-                <Text className="text-sidebar-foreground text-sm font-semibold">Sam Kepler</Text>
-                <Text className="text-muted-foreground text-xs">local profile</Text>
+                <Text className="text-foreground text-[12.5px] font-semibold">Sam Kepler</Text>
+                <Text className="text-muted-foreground font-mono text-[10px]">local profile</Text>
               </View>
             </View>
           </SheetFooter>

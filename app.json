@@ -38,7 +38,8 @@
             "node_modules/@expo-google-fonts/geist-mono/400Regular/GeistMono_400Regular.ttf"
           ]
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true

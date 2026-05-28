@@ -1,6 +1,8 @@
 import { OnboardingProgress } from '@/components/onboarding/onboarding-progress';
+import { useTheme } from '@react-navigation/native';
 import { Stack, useSegments } from 'expo-router';
 import { useCallback, useMemo } from 'react';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const STEPS: Record<string, number> = {
@@ -13,6 +15,7 @@ const TOTAL = Object.keys(STEPS).length;
 
 export default function OnboardingLayout() {
   const segments = useSegments();
+  const { colors } = useTheme();
   const currentSegment = segments[segments.length - 1] ?? 'index';
   const step = STEPS[currentSegment] ?? 1;
 
@@ -32,13 +35,19 @@ export default function OnboardingLayout() {
       animation: 'none' as const,
       headerLeft,
       headerRight,
+      headerStyle: { backgroundColor: colors.background },
+      headerShadowVisible: false,
     }),
-    [headerLeft, headerRight]
+    [colors.background, headerLeft, headerRight]
   );
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={BOTTOM_EDGE} style={S.flex}>
       <Stack screenOptions={screenOptions} />
     </SafeAreaView>
   );
 }
+
+const BOTTOM_EDGE = ['bottom'] as const;
+
+const S = StyleSheet.create({ flex: { flex: 1 } });

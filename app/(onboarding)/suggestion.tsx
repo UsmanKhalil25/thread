@@ -64,8 +64,8 @@ function ModelAvatar({
 
 function SpeedBadge({ speed }: { speed: string }) {
   return (
-    <View className="flex-row items-center gap-1 rounded-md bg-[#064e3b] px-2 py-1">
-      <Text className="text-xs font-medium text-[#34d399]">{speed} t/s</Text>
+    <View className="flex-row items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1">
+      <Text className="text-xs font-medium text-emerald-500">{speed} t/s</Text>
     </View>
   );
 }

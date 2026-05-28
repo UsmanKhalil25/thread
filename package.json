@@ -41,12 +41,14 @@
     "@rn-primitives/toggle": "^1.4.0",
     "@rn-primitives/toggle-group": "^1.4.0",
     "@rn-primitives/tooltip": "^1.4.0",
+    "@shopify/flash-list": "2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "~55.0.19",
     "expo-constants": "~55.0.15",
     "expo-font": "~55.0.8",
     "expo-haptics": "~55.0.14",
+    "expo-image": "~55.0.11",
     "expo-linking": "~55.0.14",
     "expo-router": "~55.0.13",
     "expo-splash-screen": "~55.0.19",
@@ -82,5 +84,6 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a"
 }
