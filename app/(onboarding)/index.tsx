@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/button';
+import { OnboardingButton } from '@/components/onboarding/onboarding-button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Link } from 'expo-router';
-import { Shield, WifiOff, Zap, MoveRight } from 'lucide-react-native';
+import { Shield, WifiOff, Zap } from 'lucide-react-native';
 import { View } from 'react-native';
 
 function FeatureCard({ icon, label }: { icon: typeof Shield; label: string }) {
@@ -38,12 +38,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View className="gap-2">
-        <Link href="/(onboarding)/privacy" asChild>
-          <Button>
-            <Text className="text-primary-foreground text-base font-semibold">Get started</Text>
-            <Icon as={MoveRight} className="text-primary-foreground size-5" />
-          </Button>
-        </Link>
+        <OnboardingButton href="/(onboarding)/privacy" label="Get started" />
         <Text className="text-muted-foreground text-center text-sm">
           Already have data?{' '}
           <Link href="/(onboarding)/privacy" className="text-primary underline">

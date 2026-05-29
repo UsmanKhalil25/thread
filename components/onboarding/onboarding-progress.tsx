@@ -1,11 +1,7 @@
 import { Text } from '@/components/ui/text';
+import { useOnboarding } from '@/contexts/onboarding';
 import { cn } from '@/lib/utils';
 import { View } from 'react-native';
-
-interface ProgressProps {
-  step: number;
-  total: number;
-}
 
 function Dot({ state }: { state: 'done' | 'active' | 'upcoming' }) {
   if (state === 'active') {
@@ -21,7 +17,8 @@ function Dot({ state }: { state: 'done' | 'active' | 'upcoming' }) {
   );
 }
 
-function Dots({ step, total }: ProgressProps) {
+function Dots() {
+  const { step, total } = useOnboarding();
   return (
     <View className="flex-row items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => (
@@ -31,7 +28,8 @@ function Dots({ step, total }: ProgressProps) {
   );
 }
 
-function Counter({ step, total }: ProgressProps) {
+function Counter() {
+  const { step, total } = useOnboarding();
   return (
     <Text className="text-muted-foreground font-mono text-xs">
       {step} / {total}
@@ -39,4 +37,11 @@ function Counter({ step, total }: ProgressProps) {
   );
 }
 
-export const OnboardingProgress = { Dots, Counter };
+export function OnboardingProgress() {
+  return (
+    <View className="bg-background flex-row items-center justify-between px-4 py-3">
+      <Dots />
+      <Counter />
+    </View>
+  );
+}

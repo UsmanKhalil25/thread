@@ -1,8 +1,7 @@
-import { Button } from '@/components/ui/button';
+import { OnboardingButton } from '@/components/onboarding/onboarding-button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Link } from 'expo-router';
-import { Archive, Laptop, Lock, MoveRight, Shield } from 'lucide-react-native';
+import { Archive, Laptop, Lock, Shield } from 'lucide-react-native';
 import { View } from 'react-native';
 
 const FEATURES = [
@@ -70,12 +69,7 @@ export default function PrivacyScreen() {
         </View>
       </View>
 
-      <Link href="/(onboarding)/suggestion" asChild>
-        <Button>
-          <Text className="text-primary-foreground text-base font-semibold">I understand</Text>
-          <Icon as={MoveRight} className="text-primary-foreground size-5" />
-        </Button>
-      </Link>
+      <OnboardingButton href="/(onboarding)/suggestion" label="I understand" />
     </View>
   );
 }

@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { markOnboardingComplete } from '@/lib/db';
 import { cn } from '@/lib/utils';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { MoveRight } from 'lucide-react-native';
 import { View } from 'react-native';
 
@@ -71,6 +72,13 @@ function SpeedBadge({ speed }: { speed: string }) {
 }
 
 export default function SuggestionScreen() {
+  const router = useRouter();
+
+  async function handleDownload() {
+    await markOnboardingComplete();
+    router.replace('/(chat)');
+  }
+
   return (
     <View className="bg-background flex-1 px-6">
       <View className="flex-1 gap-6 pt-6">
@@ -152,12 +160,10 @@ export default function SuggestionScreen() {
         </View>
       </View>
 
-      <Link href="/(chat)" asChild>
-        <Button>
-          <Text className="text-primary-foreground text-base font-semibold">Download • 2.1 GB</Text>
-          <Icon as={MoveRight} className="text-primary-foreground size-5" />
-        </Button>
-      </Link>
+      <Button onPress={handleDownload}>
+        <Text className="text-primary-foreground text-base font-semibold">Download • 2.1 GB</Text>
+        <Icon as={MoveRight} className="text-primary-foreground size-5" />
+      </Button>
     </View>
   );
 }

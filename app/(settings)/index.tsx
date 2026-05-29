@@ -5,17 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
-import {
-  Database,
-  Eye,
-  Hash,
-  Lock,
-  CloudOff,
-  Trash,
-  Gauge,
-  Zap,
-  Sparkles,
-} from 'lucide-react-native';
+import { Database, Eye, Hash, Lock, CloudOff, Gauge, Zap, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 

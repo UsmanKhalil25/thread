@@ -44,6 +44,7 @@
     "@shopify/flash-list": "2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "expo": "~55.0.19",
     "expo-constants": "~55.0.15",
     "expo-font": "~55.0.8",
@@ -52,6 +53,7 @@
     "expo-linking": "~55.0.14",
     "expo-router": "~55.0.13",
     "expo-splash-screen": "~55.0.19",
+    "expo-sqlite": "~55.0.16",
     "expo-status-bar": "~55.0.5",
     "expo-system-ui": "~55.0.16",
     "expo-updates": "~55.0.21",
@@ -76,6 +78,8 @@
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@types/react": "~19.2.10",
+    "babel-plugin-inline-import": "^3.0.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.1",
     "eslint-config-prettier": "^10.1.8",
@@ -83,7 +87,5 @@
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript": "~5.9.2"
-  },
-  "private": true,
-  "packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a"
+  }
 }

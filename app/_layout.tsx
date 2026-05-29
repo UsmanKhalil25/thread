@@ -1,8 +1,7 @@
 import '@/global.css';
 
+import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { NAV_THEME } from '@/lib/theme';
-import { Geist_400Regular, useFonts } from '@expo-google-fonts/geist';
-import { GeistMono_400Regular } from '@expo-google-fonts/geist-mono';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
@@ -10,7 +9,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
 import { useUniwind } from 'uniwind';
 
 export { ErrorBoundary } from 'expo-router';
@@ -23,20 +21,9 @@ const SCREEN_OPTIONS = {
 
 export default function RootLayout() {
   const { theme } = useUniwind();
-  const [fontsLoaded, fontError] = useFonts({
-    Geist_400Regular,
-    GeistMono_400Regular,
-  });
+  const { isReady } = useSplashScreen();
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
+  if (!isReady) return null;
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
