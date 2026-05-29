@@ -1,15 +1,13 @@
+import { SearchInput } from '@/components/chat/search-input';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
 import { Text } from '@/components/ui/text';
-import { THEME } from '@/lib/theme';
 import { FlashList } from '@shopify/flash-list';
-import { Database, Plus, Search, Settings, X } from 'lucide-react-native';
+import { Database, Plus, Settings, X } from 'lucide-react-native';
 import { useCallback } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUniwind } from 'uniwind';
 
 type Chat = {
   id: string;
@@ -38,7 +36,7 @@ const LIST_DATA: ListItem[] = [
   ...CHATS.filter((c) => c.section === 'Earlier').map((chat) => ({ type: 'chat' as const, chat })),
 ];
 
-const SAFE_AREA_EDGES = ['top', 'bottom'] as const;
+const EDGES = ['top', 'bottom'] as const;
 
 interface ChatHistoryDrawerProps {
   open: boolean;
@@ -51,7 +49,7 @@ interface ChatHistoryDrawerProps {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <Text className="text-muted-foreground px-1.5 pt-3 pb-1 font-mono text-[10.5px] font-medium tracking-[0.05em] uppercase">
+    <Text className="text-muted-foreground px-1.5 pt-3 pb-1 font-mono text-xs font-medium uppercase">
       {label}
     </Text>
   );
@@ -66,7 +64,7 @@ function ChatRow({ chat, onSelectChat }: { chat: Chat; onSelectChat?: (id: strin
         chat.active ? 'bg-card' : ''
       }`}>
       <Text
-        className={`flex-1 text-[13px] ${
+        className={`flex-1 text-sm ${
           chat.active ? 'text-foreground font-medium' : 'text-muted-foreground font-normal'
         }`}
         numberOfLines={1}>
@@ -87,9 +85,6 @@ export function ChatHistoryDrawer({
   onModels,
   onSettings,
 }: ChatHistoryDrawerProps) {
-  const { theme } = useUniwind();
-  const placeholderColor = THEME[theme ?? 'light'].mutedForeground;
-
   const handleOpenChange = useCallback(
     (v: boolean) => {
       if (!v) onClose();
@@ -114,7 +109,7 @@ export function ChatHistoryDrawer({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="left">
-        <SafeAreaView edges={SAFE_AREA_EDGES} style={{ flex: 1 }}>
+        <SafeAreaView edges={EDGES} style={{ flex: 1 }}>
           <SheetHeader className="flex-row items-center px-2 pb-2">
             <Button variant="ghost" size="icon" onPress={onClose}>
               <Icon as={X} className="text-sidebar-foreground size-5" />
@@ -128,16 +123,9 @@ export function ChatHistoryDrawer({
             </Pressable>
           </SheetHeader>
 
-          <View className="border-border m-3 flex-row items-center justify-center gap-1 rounded border px-3">
-            <Icon as={Search} className="text-muted-foreground" size={14} />
-            <TextInput
-              placeholder="Search chats"
-              placeholderTextColor={placeholderColor}
-              className="text-sidebar-foreground flex-1 text-[12.5px]"
-            />
-          </View>
+          <SearchInput />
 
-          <View style={{ flex: 1 }} className="px-3">
+          <View className="flex-1 px-3">
             <FlashList
               data={LIST_DATA}
               renderItem={renderItem}
@@ -147,34 +135,22 @@ export function ChatHistoryDrawer({
             />
           </View>
 
-          <SheetFooter className="gap-0 px-2 pb-4">
+          <SheetFooter className="pb-4">
             <Button
               variant="ghost"
               onPress={onModels}
-              className="flex-row items-center justify-start gap-2.5 py-2.5">
-              <Icon as={Database} className="text-sidebar-foreground" size={14} />
-              <Text className="text-foreground text-[13px]">Models</Text>
+              className="flex-row items-center justify-start gap-3">
+              <Icon as={Database} className="text-muted-foreground" />
+              <Text className="text-foreground text-sm">Models</Text>
             </Button>
 
             <Button
               variant="ghost"
               onPress={onSettings}
-              className="flex-row items-center justify-start gap-2.5 py-2.5">
-              <Icon as={Settings} className="text-sidebar-foreground" size={14} />
-              <Text className="text-foreground text-[13px]">Settings</Text>
+              className="flex-row items-center justify-start gap-3">
+              <Icon as={Settings} className="text-muted-foreground" />
+              <Text className="text-foreground text-sm">Settings</Text>
             </Button>
-
-            <Separator className="bg-sidebar-border my-1" />
-
-            <View className="flex-row items-center gap-2.5 px-3 py-2.5">
-              <View className="bg-muted h-[30px] w-[30px] items-center justify-center rounded-lg">
-                <Text className="text-foreground font-mono text-[11px] font-semibold">SK</Text>
-              </View>
-              <View className="gap-0.5">
-                <Text className="text-foreground text-[12.5px] font-semibold">Sam Kepler</Text>
-                <Text className="text-muted-foreground font-mono text-[10px]">local profile</Text>
-              </View>
-            </View>
           </SheetFooter>
         </SafeAreaView>
       </SheetContent>
