@@ -2,7 +2,7 @@ import { OnboardingButton } from '@/components/onboarding/onboarding-button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Archive, Laptop, Lock, Shield } from 'lucide-react-native';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 const FEATURES = [
   {
@@ -52,22 +52,27 @@ function FeatureRow({
 export default function PrivacyScreen() {
   return (
     <View className="bg-background flex-1 px-6">
-      <View className="flex-1 gap-6 pt-8">
-        <View className="gap-2">
-          <Text className="text-foreground text-left text-3xl font-bold tracking-tight">
-            Your chats never leave the device.
-          </Text>
-          <Text className="text-muted-foreground font-mono text-base leading-relaxed">
-            Models run locally, embeddings stay local, your data is yours.
-          </Text>
-        </View>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 32 }}>
+        <View className="gap-6">
+          <View className="gap-2">
+            <Text className="text-foreground text-left text-3xl font-bold tracking-tight">
+              Your chats never leave the device.
+            </Text>
+            <Text className="text-muted-foreground font-mono text-base leading-relaxed">
+              Models run locally, embeddings stay local, your data is yours.
+            </Text>
+          </View>
 
-        <View className="gap-3 pt-2">
-          {FEATURES.map((feature) => (
-            <FeatureRow key={feature.title} {...feature} />
-          ))}
+          <View className="gap-3 pt-2">
+            {FEATURES.map((feature) => (
+              <FeatureRow key={feature.title} {...feature} />
+            ))}
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       <OnboardingButton href="/(onboarding)/suggestion" label="I understand" />
     </View>

@@ -1,7 +1,8 @@
 import '@/global.css';
 
+import { DownloadProvider } from '@/contexts/downloads';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
-import { NAV_THEME } from '@/lib/theme';
+import { NAV_THEME, THEME } from '@/lib/theme';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
@@ -26,12 +27,16 @@ export default function RootLayout() {
   if (!isReady) return null;
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+    <SafeAreaProvider
+      initialMetrics={initialWindowMetrics}
+      style={{ backgroundColor: THEME[theme ?? 'light'].background }}>
       <KeyboardProvider>
         <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-          <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-          <Stack screenOptions={SCREEN_OPTIONS} />
-          <PortalHost />
+          <DownloadProvider>
+            <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+            <Stack screenOptions={SCREEN_OPTIONS} />
+            <PortalHost />
+          </DownloadProvider>
         </ThemeProvider>
       </KeyboardProvider>
     </SafeAreaProvider>

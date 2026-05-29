@@ -15,7 +15,7 @@ export function ModelRow({ model, selected, onPress }: ModelRowProps) {
       onPress={onPress}
       className={cn(
         'mx-2 flex-row items-center gap-3 rounded-xl px-3 py-2.5',
-        selected && 'bg-muted border-border border'
+        selected && 'bg-primary/10 border-primary/20 border'
       )}>
       <View className="flex-1 gap-0.5">
         <Text className="text-foreground text-sm font-medium">{model.name}</Text>

@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/icon';
 import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
 import { Text } from '@/components/ui/text';
 import { FlashList } from '@shopify/flash-list';
-import { Database, Plus, Settings, X } from 'lucide-react-native';
+import { ChevronRight, Plus, Settings, X } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -136,21 +136,19 @@ export function ChatHistoryDrawer({
           </View>
 
           <SheetFooter className="pb-4">
-            <Button
-              variant="ghost"
-              onPress={onModels}
-              className="flex-row items-center justify-start gap-3">
-              <Icon as={Database} className="text-muted-foreground" />
-              <Text className="text-foreground text-sm">Models</Text>
-            </Button>
-
-            <Button
-              variant="ghost"
+            <Pressable
               onPress={onSettings}
-              className="flex-row items-center justify-start gap-3">
-              <Icon as={Settings} className="text-muted-foreground" />
-              <Text className="text-foreground text-sm">Settings</Text>
-            </Button>
+              className="flex-row items-center gap-3 py-2 active:opacity-70">
+              <Icon as={Settings} className="text-muted-foreground size-5" />
+              <Text className="text-foreground flex-1 text-sm">Settings</Text>
+              <Icon as={ChevronRight} className="text-muted-foreground size-4" />
+            </Pressable>
+
+            <View className="flex-row items-center gap-1.5 pt-1">
+              <Text className="text-muted-foreground font-mono text-[11px]">
+                on-device · private · offline
+              </Text>
+            </View>
           </SheetFooter>
         </SafeAreaView>
       </SheetContent>

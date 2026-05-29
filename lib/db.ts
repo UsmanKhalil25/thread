@@ -1,12 +1,12 @@
 import { db } from '@/db/client';
-import { PREFERENCE_KEYS } from '@/db/keys';
+import { PREFERENCE_IDS } from '@/db/keys';
 import { preferencesTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function hasCompletedOnboarding(): Promise<boolean> {
   try {
     const row = await db.query.preferencesTable.findFirst({
-      where: eq(preferencesTable.key, PREFERENCE_KEYS.ONBOARDING_COMPLETE),
+      where: eq(preferencesTable.id, PREFERENCE_IDS.ONBOARDING_COMPLETE),
     });
     return row?.value === 'true';
   } catch {
@@ -17,6 +17,6 @@ export async function hasCompletedOnboarding(): Promise<boolean> {
 export async function markOnboardingComplete(): Promise<void> {
   await db
     .insert(preferencesTable)
-    .values({ key: PREFERENCE_KEYS.ONBOARDING_COMPLETE, value: 'true' })
-    .onConflictDoUpdate({ target: preferencesTable.key, set: { value: 'true' } });
+    .values({ id: PREFERENCE_IDS.ONBOARDING_COMPLETE, value: 'true' })
+    .onConflictDoUpdate({ target: preferencesTable.id, set: { value: 'true' } });
 }

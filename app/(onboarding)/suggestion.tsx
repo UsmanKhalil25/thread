@@ -5,7 +5,7 @@ import { markOnboardingComplete } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'expo-router';
 import { MoveRight } from 'lucide-react-native';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 const RECOMMENDED = {
   initial: 'L',
@@ -81,84 +81,87 @@ export default function SuggestionScreen() {
 
   return (
     <View className="bg-background flex-1 px-6">
-      <View className="flex-1 gap-6 pt-6">
-        <View className="gap-1">
-          <Text className="text-foreground text-left text-2xl font-bold tracking-tight">
-            Recommended for your device
-          </Text>
-          <Text className="text-muted-foreground font-mono text-sm leading-relaxed">
-            Balanced quality vs. speed for the iPhone 16 Pro.
-          </Text>
-        </View>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 24 }}>
+        <View className="gap-6">
+          <View className="gap-1">
+            <Text className="text-foreground text-left text-2xl font-bold tracking-tight">
+              Recommended for your device
+            </Text>
+            <Text className="text-muted-foreground font-mono text-sm leading-relaxed">
+              Balanced quality vs. speed for the iPhone 16 Pro.
+            </Text>
+          </View>
 
-        <View className="bg-card border-border relative gap-4 rounded-2xl border p-4">
-          <View className="flex-row items-center gap-3">
-            <ModelAvatar initial={RECOMMENDED.initial} color={RECOMMENDED.avatarColor} />
-            <View className="flex-1 gap-0.5 pr-16">
-              <Text className="text-foreground text-sm font-semibold">{RECOMMENDED.name}</Text>
-              <Text className="text-muted-foreground text-xs">{RECOMMENDED.meta}</Text>
+          <View className="bg-card border-border relative gap-4 rounded-2xl border p-4">
+            <View className="flex-row items-center gap-3">
+              <ModelAvatar initial={RECOMMENDED.initial} color={RECOMMENDED.avatarColor} />
+              <View className="flex-1 gap-0.5 pr-16">
+                <Text className="text-foreground text-sm font-semibold">{RECOMMENDED.name}</Text>
+                <Text className="text-muted-foreground text-xs">{RECOMMENDED.meta}</Text>
+              </View>
+            </View>
+
+            <View className="flex-row gap-4">
+              <View className="flex-1 gap-1">
+                <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+                  Speed
+                </Text>
+                <View className="flex-row items-baseline gap-0.5">
+                  <Text className="text-foreground text-lg font-bold">{RECOMMENDED.speed}</Text>
+                  <Text className="text-muted-foreground text-xs">t/s</Text>
+                </View>
+              </View>
+              <View className="flex-1 gap-1">
+                <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+                  RAM
+                </Text>
+                <View className="flex-row items-baseline gap-0.5">
+                  <Text className="text-foreground text-lg font-bold">{RECOMMENDED.ram}</Text>
+                  <Text className="text-muted-foreground text-xs">GB</Text>
+                </View>
+              </View>
+              <View className="flex-1 gap-1">
+                <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+                  Quality
+                </Text>
+                <View className="flex-row items-baseline gap-0.5">
+                  <Text className="text-foreground text-lg font-bold">{RECOMMENDED.quality}</Text>
+                  <Text className="text-muted-foreground text-xs">MMLU</Text>
+                </View>
+              </View>
+            </View>
+
+            <View className="flex-row flex-wrap gap-2">
+              {RECOMMENDED.tags.map((tag) => (
+                <View key={tag} className="bg-secondary rounded-md px-2.5 py-1">
+                  <Text className="text-secondary-foreground text-xs">{tag}</Text>
+                </View>
+              ))}
             </View>
           </View>
 
-          <View className="flex-row gap-4">
-            <View className="flex-1 gap-1">
-              <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                Speed
-              </Text>
-              <View className="flex-row items-baseline gap-0.5">
-                <Text className="text-foreground text-lg font-bold">{RECOMMENDED.speed}</Text>
-                <Text className="text-muted-foreground text-xs">t/s</Text>
-              </View>
-            </View>
-            <View className="flex-1 gap-1">
-              <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                RAM
-              </Text>
-              <View className="flex-row items-baseline gap-0.5">
-                <Text className="text-foreground text-lg font-bold">{RECOMMENDED.ram}</Text>
-                <Text className="text-muted-foreground text-xs">GB</Text>
-              </View>
-            </View>
-            <View className="flex-1 gap-1">
-              <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                Quality
-              </Text>
-              <View className="flex-row items-baseline gap-0.5">
-                <Text className="text-foreground text-lg font-bold">{RECOMMENDED.quality}</Text>
-                <Text className="text-muted-foreground text-xs">MMLU</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Tags */}
-          <View className="flex-row flex-wrap gap-2">
-            {RECOMMENDED.tags.map((tag) => (
-              <View key={tag} className="bg-secondary rounded-md px-2.5 py-1">
-                <Text className="text-secondary-foreground text-xs">{tag}</Text>
+          <View className="gap-3">
+            <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+              Alternatives
+            </Text>
+            {ALTERNATIVES.map((alt) => (
+              <View
+                key={alt.name}
+                className="bg-card border-border flex-row items-center gap-3 rounded-xl border p-3">
+                <ModelAvatar initial={alt.initial} color={alt.avatarColor} size="sm" />
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-foreground text-sm font-medium">{alt.name}</Text>
+                  <Text className="text-muted-foreground text-xs">{alt.meta}</Text>
+                </View>
+                <SpeedBadge speed={alt.speed} />
               </View>
             ))}
           </View>
         </View>
-
-        {/* Alternatives */}
-        <View className="gap-3">
-          <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-            Alternatives
-          </Text>
-          {ALTERNATIVES.map((alt) => (
-            <View
-              key={alt.name}
-              className="bg-card border-border flex-row items-center gap-3 rounded-xl border p-3">
-              <ModelAvatar initial={alt.initial} color={alt.avatarColor} size="sm" />
-              <View className="flex-1 gap-0.5">
-                <Text className="text-foreground text-sm font-medium">{alt.name}</Text>
-                <Text className="text-muted-foreground text-xs">{alt.meta}</Text>
-              </View>
-              <SpeedBadge speed={alt.speed} />
-            </View>
-          ))}
-        </View>
-      </View>
+      </ScrollView>
 
       <Button onPress={handleDownload}>
         <Text className="text-primary-foreground text-base font-semibold">Download • 2.1 GB</Text>

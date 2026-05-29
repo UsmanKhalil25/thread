@@ -27,6 +27,11 @@ export default function ChatLayout() {
     router.push('/(settings)');
   }, [router]);
 
+  const navigateToModels = useCallback(() => {
+    setModelPickerOpen(false);
+    router.push('/(settings)/models');
+  }, [router]);
+
   const headerTitle = useCallback(
     () => <ChatHeader onPress={openModelPicker} />,
     [openModelPicker]
@@ -61,7 +66,11 @@ export default function ChatLayout() {
           onClose={closeDrawer}
           onSettings={navigateToSettings}
         />
-        <ModelPickerDrawer open={modelPickerOpen} onClose={closeModelPicker} />
+        <ModelPickerDrawer
+          open={modelPickerOpen}
+          onClose={closeModelPicker}
+          onBrowseModels={navigateToModels}
+        />
       </SafeAreaView>
     </ChatProvider>
   );

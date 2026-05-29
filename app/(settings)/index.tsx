@@ -1,13 +1,20 @@
 import { SettingsGroup } from '@/components/settings/settings-group';
 import { SettingsRow } from '@/components/settings/settings-row';
-import { Icon } from '@/components/ui/icon';
-import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  type Option,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
-import { Database, Eye, Hash, Lock, CloudOff, Gauge, Zap, Sparkles } from 'lucide-react-native';
+import { Database, Eye, Lock, CloudOff, Gauge, Zap, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { Uniwind, useUniwind } from 'uniwind';
 
 function SettingsToggle({ defaultChecked = false }: { defaultChecked?: boolean }) {
   const [checked, setChecked] = useState(defaultChecked);
@@ -20,6 +27,30 @@ function SettingsToggle({ defaultChecked = false }: { defaultChecked?: boolean }
   );
 }
 
+function AppearanceSelect() {
+  const { theme } = useUniwind();
+  const value: Option = { value: theme ?? 'light', label: theme === 'dark' ? 'Dark' : 'Light' };
+
+  function onValueChange(option: Option | undefined) {
+    if (option) Uniwind.setTheme(option.value as 'light' | 'dark');
+  }
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger variant="ghost">
+        <SelectValue
+          placeholder="Theme"
+          className="text-muted-foreground font-mono text-[12.5px]"
+        />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="light" label="Light" />
+        <SelectItem value="dark" label="Dark" />
+      </SelectContent>
+    </Select>
+  );
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
 
@@ -29,48 +60,6 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 32 }}>
       <View className="gap-6 px-5 py-4">
-        <View className="gap-1">
-          <Text className="text-foreground text-[26px] font-semibold tracking-[-0.025em]">
-            Settings
-          </Text>
-        </View>
-
-        {/* Profile card */}
-        <View className="bg-card border-border rounded-2xl border p-3.5">
-          <View className="flex-row items-center gap-3">
-            <View className="bg-muted h-10 w-10 items-center justify-center rounded-xl">
-              <Text className="text-foreground font-mono text-sm font-semibold">SK</Text>
-            </View>
-            <View className="flex-1 gap-0.5">
-              <Text className="text-foreground text-[13.5px] font-medium tracking-[-0.005em]">
-                Sam Kepler
-              </Text>
-              <Text className="text-muted-foreground font-mono text-[11px]">
-                local · no account needed
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1">
-              <Icon as={Lock} className="text-green-500" size={10} />
-              <Text className="font-mono text-[11px] font-medium text-green-500">private</Text>
-            </View>
-          </View>
-
-          <Separator className="my-3" />
-
-          <View className="flex-row items-baseline gap-1">
-            <Text className="text-foreground font-mono text-[18px] font-semibold tracking-[-0.02em]">
-              7.5
-            </Text>
-            <Text className="text-muted-foreground font-mono text-[11px]">GB · 4 models</Text>
-            <View className="flex-1" />
-            <Text className="text-muted-foreground text-[11px]">56.4 GB free</Text>
-          </View>
-          <View className="bg-muted mt-2 h-1 overflow-hidden rounded-full">
-            <View className="h-full w-[12%] rounded-full bg-blue-400" />
-          </View>
-        </View>
-
-        {/* App */}
         <SettingsGroup label="App">
           <SettingsRow
             icon={Database}
@@ -79,8 +68,7 @@ export default function SettingsScreen() {
             onPress={() => router.push('/(settings)/models')}
             isFirst
           />
-          <SettingsRow icon={Eye} title="Appearance" value="Dark" />
-          <SettingsRow icon={Hash} title="Text size" value="Medium" />
+          <SettingsRow icon={Eye} title="Appearance" control={<AppearanceSelect />} />
         </SettingsGroup>
 
         {/* Privacy & data */}

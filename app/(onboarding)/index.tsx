@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Link } from 'expo-router';
 import { Shield, WifiOff, Zap } from 'lucide-react-native';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 function FeatureCard({ icon, label }: { icon: typeof Shield; label: string }) {
   return (
@@ -19,23 +19,28 @@ function FeatureCard({ icon, label }: { icon: typeof Shield; label: string }) {
 export default function WelcomeScreen() {
   return (
     <View className="bg-background flex-1 px-6">
-      <View className="flex-1 justify-center gap-10">
-        <View className="gap-3">
-          <Text className="text-foreground text-left text-4xl font-extrabold tracking-tight">
-            Run open models{'\n'}on this device.
-          </Text>
-          <Text className="text-muted-foreground font-mono text-base leading-relaxed">
-            A local-first AI workspace for chat, research and code — with nothing leaving your
-            phone.
-          </Text>
-        </View>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+        <View className="gap-10">
+          <View className="gap-3">
+            <Text className="text-foreground text-left text-4xl font-extrabold tracking-tight">
+              Run open models{'\n'}on this device.
+            </Text>
+            <Text className="text-muted-foreground font-mono text-base leading-relaxed">
+              A local-first AI workspace for chat, research and code — with nothing leaving your
+              phone.
+            </Text>
+          </View>
 
-        <View className="flex-row gap-3">
-          <FeatureCard icon={Shield} label="Private" />
-          <FeatureCard icon={WifiOff} label="Offline" />
-          <FeatureCard icon={Zap} label="Fast" />
+          <View className="flex-row gap-3">
+            <FeatureCard icon={Shield} label="Private" />
+            <FeatureCard icon={WifiOff} label="Offline" />
+            <FeatureCard icon={Zap} label="Fast" />
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       <View className="gap-2">
         <OnboardingButton href="/(onboarding)/privacy" label="Get started" />
