@@ -14,7 +14,6 @@ type ModelStatus = 'installed' | 'downloading' | null;
 
 interface Model {
   id: string;
-  initial: string;
   name: string;
   params: string;
   quant: string;
@@ -22,7 +21,7 @@ interface Model {
   ramGb: string;
   speed: string;
   compat: number;
-  tint: string;
+  family: string;
   status: ModelStatus;
   progress?: number;
   picked?: boolean;
@@ -31,7 +30,6 @@ interface Model {
 const MODELS: Model[] = [
   {
     id: '1',
-    initial: 'L',
     name: 'Llama 3.2 · 3B Instruct',
     params: '3.2 B',
     quant: 'Q4_K_M',
@@ -39,13 +37,12 @@ const MODELS: Model[] = [
     ramGb: '2.6',
     speed: '34',
     compat: 92,
-    tint: '#60a5fa',
+    family: 'llama',
     status: 'installed',
     picked: true,
   },
   {
     id: '2',
-    initial: 'Q',
     name: 'Qwen 2.5 · Coder 1.5B',
     params: '1.5 B',
     quant: 'Q5_K_M',
@@ -53,12 +50,11 @@ const MODELS: Model[] = [
     ramGb: '1.9',
     speed: '48',
     compat: 95,
-    tint: '#a78bfa',
+    family: 'qwen',
     status: null,
   },
   {
     id: '3',
-    initial: 'M',
     name: 'Mistral 7B · v0.3',
     params: '7.2 B',
     quant: 'Q4_0',
@@ -66,13 +62,12 @@ const MODELS: Model[] = [
     ramGb: '5.2',
     speed: '14',
     compat: 62,
-    tint: '#fb923c',
+    family: 'mistral',
     status: 'downloading',
     progress: 42,
   },
   {
     id: '4',
-    initial: 'P',
     name: 'Phi-3.5 · mini',
     params: '3.8 B',
     quant: 'Q4_K_M',
@@ -80,12 +75,11 @@ const MODELS: Model[] = [
     ramGb: '2.7',
     speed: '38',
     compat: 88,
-    tint: '#f472b6',
+    family: 'phi',
     status: null,
   },
   {
     id: '5',
-    initial: 'G',
     name: 'Gemma 2 · 2B',
     params: '2.6 B',
     quant: 'Q5_K_M',
@@ -93,7 +87,7 @@ const MODELS: Model[] = [
     ramGb: '2.1',
     speed: '41',
     compat: 90,
-    tint: '#34d399',
+    family: 'gemma',
     status: 'installed',
   },
 ];
@@ -103,7 +97,7 @@ function ModelRow({ model, isLast }: { model: Model; isLast?: boolean }) {
     <View className={`flex-col gap-2 px-5 py-4 ${!isLast ? 'border-border border-b' : ''}`}>
       {/* Top row */}
       <View className="flex-row items-center gap-3">
-        <ModelAvatar letter={model.initial} tint={model.tint} size={30} />
+        <ModelAvatar family={model.family} size={30} />
         <View className="flex-1 gap-0.5">
           <View className="flex-row items-center gap-1.5">
             <Text className="text-foreground text-[14px] font-medium tracking-[-0.005em]">

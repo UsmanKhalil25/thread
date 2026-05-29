@@ -1,6 +1,7 @@
 import { ChatHistoryDrawer } from '@/components/chat/chat-history-drawer';
 import { ChatHeader } from '@/components/chat/chat-header';
 import { ModelPickerDrawer } from '@/components/chat/model-picker-drawer';
+import { ChatProvider } from '@/contexts/chat';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useTheme } from '@react-navigation/native';
@@ -52,11 +53,17 @@ export default function ChatLayout() {
   );
 
   return (
-    <SafeAreaView edges={EDGES} style={S.flex}>
-      <Stack screenOptions={screenOptions} />
-      <ChatHistoryDrawer open={drawerOpen} onClose={closeDrawer} onSettings={navigateToSettings} />
-      <ModelPickerDrawer open={modelPickerOpen} onClose={closeModelPicker} />
-    </SafeAreaView>
+    <ChatProvider>
+      <SafeAreaView edges={EDGES} style={S.flex}>
+        <Stack screenOptions={screenOptions} />
+        <ChatHistoryDrawer
+          open={drawerOpen}
+          onClose={closeDrawer}
+          onSettings={navigateToSettings}
+        />
+        <ModelPickerDrawer open={modelPickerOpen} onClose={closeModelPicker} />
+      </SafeAreaView>
+    </ChatProvider>
   );
 }
 
