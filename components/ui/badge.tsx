@@ -28,14 +28,20 @@ const badgeVariants = cva(
         ),
         outline: Platform.select({ web: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground' }),
       },
+      size: {
+        sm: 'px-1.5 py-0.5',
+        default: 'px-2 py-0.5',
+        lg: 'px-3 py-1',
+      },
     },
     defaultVariants: {
       variant: 'default',
+      size: 'default',
     },
   }
 );
 
-const badgeTextVariants = cva('text-xs font-medium', {
+const badgeTextVariants = cva('font-medium', {
   variants: {
     variant: {
       default: 'text-primary-foreground',
@@ -43,9 +49,15 @@ const badgeTextVariants = cva('text-xs font-medium', {
       destructive: 'text-white',
       outline: 'text-foreground',
     },
+    size: {
+      sm: 'text-[10px]',
+      default: 'text-xs',
+      lg: 'text-sm',
+    },
   },
   defaultVariants: {
     variant: 'default',
+    size: 'default',
   },
 });
 
@@ -54,11 +66,11 @@ type BadgeProps = React.ComponentProps<typeof View> &
     asChild?: boolean;
   } & VariantProps<typeof badgeVariants>;
 
-function Badge({ className, variant, asChild, ...props }: BadgeProps) {
+function Badge({ className, variant, size, asChild, ...props }: BadgeProps) {
   const Component = asChild ? Slot : View;
   return (
-    <TextClassContext.Provider value={badgeTextVariants({ variant })}>
-      <Component className={cn(badgeVariants({ variant }), className)} {...props} />
+    <TextClassContext.Provider value={badgeTextVariants({ variant, size })}>
+      <Component className={cn(badgeVariants({ variant, size }), className)} {...props} />
     </TextClassContext.Provider>
   );
 }
