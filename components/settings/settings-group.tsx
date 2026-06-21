@@ -1,4 +1,4 @@
-import { Text } from '@/components/ui/text';
+import { Caption } from '@/components/ui/typography';
 import { View } from 'react-native';
 
 interface SettingsGroupProps {
@@ -8,11 +8,9 @@ interface SettingsGroupProps {
 
 export function SettingsGroup({ label, children }: SettingsGroupProps) {
   return (
-    <View className="gap-0">
-      <Text className="text-muted-foreground px-1 pb-2 font-mono text-[11px] font-medium tracking-widest uppercase">
-        {label}
-      </Text>
-      <View>{children}</View>
+    <View className="gap-2">
+      <Caption className="px-1 uppercase">{label}</Caption>
+      <View className="bg-card border-border overflow-hidden rounded-2xl border">{children}</View>
     </View>
   );
 }

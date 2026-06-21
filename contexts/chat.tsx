@@ -1,17 +1,17 @@
 import { createContext, useContext, useState, type PropsWithChildren } from 'react';
 
 interface ChatContextValue {
-  selectedModelId: string;
-  setSelectedModelId: (id: string) => void;
+  selectedModelId: string | null;
+  setSelectedModelId: (id: string | null) => void;
 }
 
 const ChatContext = createContext<ChatContextValue>({
-  selectedModelId: '1',
+  selectedModelId: null,
   setSelectedModelId: () => {},
 });
 
 export function ChatProvider({ children }: PropsWithChildren) {
-  const [selectedModelId, setSelectedModelId] = useState('1');
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
 
   return (
     <ChatContext.Provider value={{ selectedModelId, setSelectedModelId }}>

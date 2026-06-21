@@ -4,8 +4,9 @@ import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useMemo } from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+
+export const unstable_settings = { initialRouteName: 'index' };
 
 export default function SettingsLayout() {
   const router = useRouter();
@@ -34,12 +35,8 @@ export default function SettingsLayout() {
   );
 
   return (
-    <SafeAreaView edges={SAFE_AREA_EDGES} style={S.flex}>
+    <View className="flex-1">
       <Stack screenOptions={screenOptions} />
-    </SafeAreaView>
+    </View>
   );
 }
-
-const SAFE_AREA_EDGES = ['bottom'] as const;
-
-const S = StyleSheet.create({ flex: { flex: 1 } });

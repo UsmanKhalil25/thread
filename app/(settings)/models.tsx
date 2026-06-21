@@ -1,19 +1,21 @@
-import { SearchInput } from '@/components/chat/search-input';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Progress } from '@/components/ui/progress';
-import { Text } from '@/components/ui/text';
+import { SearchInput } from '@/components/ui/search-input';
+import { Caption, RowTitle } from '@/components/ui/typography';
 import { useDownloads } from '@/contexts/downloads';
 import { ANDROID_MODELS, type ModelDefinition } from '@/lib/models';
 import type { Model } from '@/types/entities/model';
-import { THEME } from '@/lib/theme';
 import { Stack } from 'expo-router';
 import { ArrowDownToLine, Check, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { useUniwind } from 'uniwind';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const FILTERS = ['all', 'compatible', 'chat', 'code', 'small · <2 gb'] as const;
+const FILTERS = ['all', 'compatible', 'code', 'small · <2 gb'] as const;
+type ModelFilter = (typeof FILTERS)[number];
+const SMALL_MODEL_BYTES = 2 * 1024 * 1024 * 1024;
+const COMPATIBLE_TIERS = new Set(['any', '6gb']);
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -26,7 +28,7 @@ function formatSpeed(bytesPerSec: number): string {
   return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 
-interface ModelRowProps {
+interface DownloadableModelRowProps {
   model: ModelDefinition;
   entry: Model | undefined;
   isLast?: boolean;
@@ -34,18 +36,24 @@ interface ModelRowProps {
   onCancel: () => void;
 }
 
-function ModelRow({ model, entry, isLast, onGet, onCancel }: ModelRowProps) {
+function DownloadableModelRow({
+  model,
+  entry,
+  isLast,
+  onGet,
+  onCancel,
+}: DownloadableModelRowProps) {
   const status = entry?.status ?? null;
   const progress = Math.round(entry?.progress ?? 0);
 
   return (
-    <View className={`gap-2 px-5 py-4 ${!isLast ? 'border-border border-b' : ''}`}>
+    <View className={`gap-2 px-4 py-4 ${!isLast ? 'border-border border-b' : ''}`}>
       <View className="flex-row items-center gap-3">
         <View className="flex-1 gap-0.5">
-          <Text className="text-foreground text-sm font-medium">{model.name}</Text>
-          <Text className="text-muted-foreground font-mono text-xs">
+          <RowTitle>{model.name}</RowTitle>
+          <Caption>
             {model.params} · {model.quant} · {model.sizeLabel}
-          </Text>
+          </Caption>
         </View>
 
         {status === 'installed' && (
@@ -53,7 +61,7 @@ function ModelRow({ model, entry, isLast, onGet, onCancel }: ModelRowProps) {
         )}
         {status === 'downloading' && (
           <View className="flex-row items-center gap-2">
-            <Text className="font-mono text-[11px] text-blue-400">{progress}%</Text>
+            <Caption className="text-blue-400">{progress}%</Caption>
             <Button variant="ghost" size="icon" onPress={onCancel} className="size-8">
               <Icon as={X} className="text-muted-foreground size-3.5" />
             </Button>
@@ -75,10 +83,10 @@ function ModelRow({ model, entry, isLast, onGet, onCancel }: ModelRowProps) {
         <>
           <Progress value={progress} className="bg-border h-0.5" indicatorClassName="bg-blue-400" />
           {entry?.bytesWritten !== undefined && entry?.totalBytes !== undefined && (
-            <Text className="text-muted-foreground font-mono text-[10.5px]">
+            <Caption>
               {formatBytes(entry.bytesWritten)} / {formatBytes(entry.totalBytes)}
               {entry.speed !== undefined && entry.speed > 0 ? ` · ${formatSpeed(entry.speed)}` : ''}
-            </Text>
+            </Caption>
           )}
         </>
       )}
@@ -87,15 +95,24 @@ function ModelRow({ model, entry, isLast, onGet, onCancel }: ModelRowProps) {
 }
 
 export default function ModelsScreen() {
-  const { theme } = useUniwind();
-  const foregroundColor = THEME[theme ?? 'light'].foreground;
-  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [activeFilter, setActiveFilter] = useState<ModelFilter>('all');
   const [query, setQuery] = useState('');
   const { state, start, cancel } = useDownloads();
+  const insets = useSafeAreaInsets();
 
-  const filtered = ANDROID_MODELS.filter(
-    (m) => query.length === 0 || m.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = ANDROID_MODELS.filter((model) => {
+    const matchesQuery =
+      query.length === 0 ||
+      model.name.toLowerCase().includes(query.toLowerCase()) ||
+      model.family.toLowerCase().includes(query.toLowerCase());
+
+    if (!matchesQuery) return false;
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'compatible') return COMPATIBLE_TIERS.has(model.deviceTier);
+    if (activeFilter === 'small · <2 gb') return model.sizeBytes < SMALL_MODEL_BYTES;
+    if (activeFilter === 'code') return ['qwen', 'phi'].includes(model.family);
+    return true;
+  });
 
   return (
     <View className="bg-background flex-1">
@@ -106,7 +123,7 @@ export default function ModelsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 14, gap: 14 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 14, gap: 8 }}
         className="flex-grow-0">
         {FILTERS.map((filter) => {
           const isActive = activeFilter === filter;
@@ -115,32 +132,30 @@ export default function ModelsScreen() {
               key={filter}
               variant="ghost"
               onPress={() => setActiveFilter(filter)}
-              className="rounded-none px-0"
-              style={{
-                paddingBottom: 6,
-                borderBottomWidth: 1.5,
-                borderBottomColor: isActive ? foregroundColor : 'transparent',
-              }}>
-              <Text
-                className={`font-mono text-[12.5px] ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+              className={`h-8 rounded-md px-2.5 ${isActive ? 'bg-secondary' : ''}`}>
+              <Caption className={isActive ? 'text-secondary-foreground' : undefined}>
                 {filter}
-              </Text>
+              </Caption>
             </Button>
           );
         })}
       </ScrollView>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {filtered.map((model, i) => (
-          <ModelRow
-            key={model.id}
-            model={model}
-            entry={state[model.id]}
-            isLast={i === filtered.length - 1}
-            onGet={() => start(model)}
-            onCancel={() => cancel(model.id)}
-          />
-        ))}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        <View className="border-border bg-card mx-6 overflow-hidden rounded-2xl border">
+          {filtered.map((model, i) => (
+            <DownloadableModelRow
+              key={model.id}
+              model={model}
+              entry={state[model.id]}
+              isLast={i === filtered.length - 1}
+              onGet={() => start(model)}
+              onCancel={() => cancel(model.id)}
+            />
+          ))}
+        </View>
       </ScrollView>
     </View>
   );

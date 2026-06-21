@@ -19,6 +19,7 @@ SplashScreen.preventAutoHideAsync();
 
 const SCREEN_OPTIONS = {
   headerShown: false,
+  animation: 'fade',
 } as const;
 
 export default function RootLayout() {

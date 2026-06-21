@@ -1,7 +1,7 @@
-import { SearchInput } from '@/components/chat/search-input';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
+import { SearchInput } from '@/components/ui/search-input';
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { FlashList } from '@shopify/flash-list';
 import { ChevronRight, Plus, Settings, X } from 'lucide-react-native';
@@ -43,7 +43,6 @@ interface ChatHistoryDrawerProps {
   onClose: () => void;
   onNewChat?: () => void;
   onSelectChat?: (id: string) => void;
-  onModels?: () => void;
   onSettings?: () => void;
 }
 
@@ -74,7 +73,6 @@ export function ChatHistoryDrawer({
   onClose,
   onNewChat,
   onSelectChat,
-  onModels,
   onSettings,
 }: ChatHistoryDrawerProps) {
   const handleOpenChange = useCallback(
@@ -102,6 +100,7 @@ export function ChatHistoryDrawer({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="left">
         <SafeAreaView edges={EDGES} style={{ flex: 1 }}>
+          <SheetTitle className="absolute h-0 w-0 opacity-0">Chat history</SheetTitle>
           <SheetHeader className="flex-row items-center px-2 pb-2">
             <Button variant="ghost" size="icon" onPress={onClose}>
               <Icon as={X} className="text-sidebar-foreground size-5" />
@@ -135,10 +134,6 @@ export function ChatHistoryDrawer({
               <RowTitle className="flex-1">Settings</RowTitle>
               <Icon as={ChevronRight} className="text-muted-foreground size-4" />
             </Pressable>
-
-            <View className="flex-row items-center gap-1.5 pt-1">
-              <Caption>on-device · private · offline</Caption>
-            </View>
           </SheetFooter>
         </SafeAreaView>
       </SheetContent>

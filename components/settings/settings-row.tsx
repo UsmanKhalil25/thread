@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
-import { Text } from '@/components/ui/text';
+import { Caption, RowTitle } from '@/components/ui/typography';
 import { ChevronRight } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
@@ -31,23 +31,22 @@ export function SettingsRow({
       {!isFirst && <Separator />}
       <Pressable
         onPress={onPress}
-        className="flex-row items-center gap-3 px-1 py-3.5 active:opacity-70">
-        {icon ? <Icon as={icon} className="text-muted-foreground shrink-0" size={14} /> : null}
+        className="flex-row items-center gap-3 px-4 py-3.5 active:opacity-70">
+        {icon ? (
+          <View className="bg-secondary h-8 w-8 items-center justify-center rounded-xl">
+            <Icon as={icon} className="text-muted-foreground size-4 shrink-0" />
+          </View>
+        ) : null}
         <View className="flex-1 gap-0.5">
-          <Text
-            className={`text-sm font-normal tracking-[-0.005em] ${danger ? 'text-destructive' : 'text-foreground'}`}>
-            {title}
-          </Text>
-          {hint ? (
-            <Text className="text-muted-foreground font-mono text-[11.5px]">{hint}</Text>
-          ) : null}
+          <RowTitle className={danger ? 'text-destructive' : undefined}>{title}</RowTitle>
+          {hint ? <Caption>{hint}</Caption> : null}
         </View>
         {control ??
           (value ? (
-            <Text className="text-muted-foreground font-mono text-[12.5px]">{value}</Text>
-          ) : (
-            <Icon as={ChevronRight} className="text-muted-foreground/50" size={13} />
-          ))}
+            <Caption>{value}</Caption>
+          ) : onPress ? (
+            <Icon as={ChevronRight} className="text-muted-foreground/50 size-4" />
+          ) : null)}
       </Pressable>
     </View>
   );

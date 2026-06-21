@@ -9,11 +9,12 @@ import {
   type Option,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Text } from '@/components/ui/text';
+import { Caption } from '@/components/ui/typography';
 import { useRouter } from 'expo-router';
-import { Database, Eye, Lock, CloudOff, Gauge, Zap, Sparkles } from 'lucide-react-native';
+import { CloudOff, Database, Eye, Gauge, Lock, Sparkles, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Uniwind, useUniwind } from 'uniwind';
 
 function SettingsToggle({ defaultChecked = false }: { defaultChecked?: boolean }) {
@@ -28,38 +29,46 @@ function SettingsToggle({ defaultChecked = false }: { defaultChecked?: boolean }
 }
 
 function AppearanceSelect() {
-  const { theme } = useUniwind();
-  const value: Option = { value: theme ?? 'light', label: theme === 'dark' ? 'Dark' : 'Light' };
+  const { theme, hasAdaptiveThemes } = useUniwind();
+  const value: Option = hasAdaptiveThemes
+    ? { value: 'system', label: 'System default' }
+    : { value: theme, label: theme === 'dark' ? 'Dark' : 'Light' };
 
   function onValueChange(option: Option | undefined) {
-    if (option) Uniwind.setTheme(option.value as 'light' | 'dark');
+    if (option) Uniwind.setTheme(option.value as 'light' | 'dark' | 'system');
   }
 
   return (
-    <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger variant="ghost">
-        <SelectValue
-          placeholder="Theme"
-          className="text-muted-foreground font-mono text-[12.5px]"
-        />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="light" label="Light" />
-        <SelectItem value="dark" label="Dark" />
-      </SelectContent>
-    </Select>
+    <View className="h-8 justify-center">
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger
+          variant="ghost"
+          className="bg-secondary h-8 items-center rounded-md px-2.5 py-0">
+          <SelectValue
+            placeholder="Theme"
+            className="text-muted-foreground font-mono text-xs leading-4"
+          />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectItem value="system" label="System default" />
+          <SelectItem value="light" label="Light" />
+          <SelectItem value="dark" label="Dark" />
+        </SelectContent>
+      </Select>
+    </View>
   );
 }
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <ScrollView
       className="bg-background flex-1"
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 32 }}>
-      <View className="gap-6 px-5 py-4">
+      contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+      <View className="gap-6 px-6 py-4">
         <SettingsGroup label="App">
           <SettingsRow
             icon={Database}
@@ -71,7 +80,6 @@ export default function SettingsScreen() {
           <SettingsRow icon={Eye} title="Appearance" control={<AppearanceSelect />} />
         </SettingsGroup>
 
-        {/* Privacy & data */}
         <SettingsGroup label="Privacy & data">
           <SettingsRow
             icon={Lock}
@@ -90,7 +98,6 @@ export default function SettingsScreen() {
           <SettingsRow title="Erase all data" hint="Models, chats, settings" danger />
         </SettingsGroup>
 
-        {/* Advanced */}
         <SettingsGroup label="Advanced">
           <SettingsRow
             icon={Gauge}
@@ -102,10 +109,9 @@ export default function SettingsScreen() {
           <SettingsRow icon={Sparkles} title="Experimental features" />
         </SettingsGroup>
 
-        {/* Footer */}
-        <Text className="text-muted-foreground/50 text-center font-mono text-[10.5px]">
+        <Caption className="text-muted-foreground/50 text-center">
           v0.4.1 · llama.cpp · open source
-        </Text>
+        </Caption>
       </View>
     </ScrollView>
   );

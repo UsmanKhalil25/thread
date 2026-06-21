@@ -3,9 +3,12 @@ import { useGreeting } from '@/hooks/use-greeting';
 import { ScreenTitle, Subtitle } from '@/components/ui/typography';
 import { StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function NewChatScreen() {
   const [greeting, subtitle] = useGreeting();
+  const insets = useSafeAreaInsets();
+
   return (
     <View className="bg-background flex-1">
       <KeyboardAwareScrollView
@@ -22,7 +25,7 @@ export default function NewChatScreen() {
         </View>
       </KeyboardAwareScrollView>
 
-      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+      <KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>
         <ChatInput />
       </KeyboardStickyView>
     </View>

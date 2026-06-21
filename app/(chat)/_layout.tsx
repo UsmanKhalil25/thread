@@ -8,8 +8,7 @@ import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { Menu } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 
 export default function ChatLayout() {
   const router = useRouter();
@@ -60,7 +59,7 @@ export default function ChatLayout() {
 
   return (
     <ChatProvider>
-      <SafeAreaView edges={EDGES} style={S.flex}>
+      <View className="flex-1">
         <Stack screenOptions={screenOptions} />
         <ChatHistoryDrawer
           open={drawerOpen}
@@ -72,11 +71,7 @@ export default function ChatLayout() {
           onClose={closeModelPicker}
           onBrowseModels={navigateToModels}
         />
-      </SafeAreaView>
+      </View>
     </ChatProvider>
   );
 }
-
-const EDGES = ['bottom'] as const;
-
-const S = StyleSheet.create({ flex: { flex: 1 } });
