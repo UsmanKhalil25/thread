@@ -1,4 +1,4 @@
-import { Text } from '@/components/ui/text';
+import { Caption, RowTitle } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import type { ModelDefinition } from '@/types/models';
 import { Pressable, View } from 'react-native';
@@ -14,15 +14,15 @@ export function ModelRow({ model, selected, onPress }: ModelRowProps) {
     <Pressable
       onPress={onPress}
       className={cn(
-        'mx-2 flex-row items-center gap-3 rounded-xl px-3 py-2.5',
-        selected && 'bg-primary/10 border-primary/20 border'
+        'mx-2 flex-row items-center gap-3 rounded-xl border border-transparent px-3 py-2.5',
+        selected && 'border-primary/20 bg-primary/10'
       )}>
       <View className="flex-1 gap-0.5">
-        <Text className="text-foreground text-sm font-medium">{model.name}</Text>
-        <Text className="text-muted-foreground font-mono text-xs">{model.sizeLabel}</Text>
+        <RowTitle>{model.name}</RowTitle>
+        <Caption>{model.sizeLabel}</Caption>
       </View>
 
-      <Text className="text-muted-foreground font-mono text-xs">{model.ramLabel}</Text>
+      <Caption>{model.ramLabel}</Caption>
     </Pressable>
   );
 }

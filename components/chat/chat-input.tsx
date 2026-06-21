@@ -39,10 +39,10 @@ export function ChatInput({
   );
 
   return (
-    <View className="px-3">
+    <View className="px-6 pt-2 pb-2">
       <View
         className={cn(
-          'border-border bg-card flex-row gap-2 rounded-3xl border px-3 py-2.5',
+          'border-border bg-card flex-row gap-2 rounded-2xl border px-3 py-2.5',
           isMultiline ? 'items-end' : 'items-center'
         )}>
         <Input
@@ -53,11 +53,11 @@ export function ChatInput({
           onContentSizeChange={handleContentSizeChange}
           {...props}
         />
-        <Animated.View layout={LinearTransition.duration(150)} className="flex-row gap-2">
-          <Button variant="ghost" size="icon" onPress={onAttach} className="h-7 w-7">
+        <Animated.View layout={LinearTransition.duration(150)} className="flex-row gap-1.5">
+          <Button variant="ghost" size="icon" onPress={onAttach} className="h-8 w-8 rounded-xl">
             <Icon as={Paperclip} className="text-muted-foreground" />
           </Button>
-          <Button variant="ghost" size="icon" onPress={onMic} className="h-7 w-7">
+          <Button variant="ghost" size="icon" onPress={onMic} className="h-8 w-8 rounded-xl">
             <Icon as={Mic} className="text-muted-foreground" />
           </Button>
           <Button

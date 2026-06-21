@@ -1,7 +1,7 @@
 import { ModelRow } from '@/components/ui/model-row';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet';
-import { Text } from '@/components/ui/text';
+import { Caption, RowTitle } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { db } from '@/db/client';
 import { modelsTable } from '@/db/schema';
@@ -50,14 +50,12 @@ export function ModelPickerDrawer({ open, onClose, onBrowseModels }: ModelPicker
           <View className="bg-foreground/20 h-1 w-9 rounded-full" />
         </View>
 
-        <SheetHeader className="py-4">
+        <SheetHeader className="px-5 py-4">
           <View className="gap-0.5">
-            <Text className="text-foreground text-[15px] font-semibold tracking-[-0.01em]">
-              Choose a model
-            </Text>
-            <Text className="text-muted-foreground font-mono text-[11.5px]">
+            <RowTitle>Choose a model</RowTitle>
+            <Caption>
               {installedModels.length} {installedModels.length === 1 ? 'model' : 'models'}
-            </Text>
+            </Caption>
           </View>
         </SheetHeader>
 
@@ -77,19 +75,17 @@ export function ModelPickerDrawer({ open, onClose, onBrowseModels }: ModelPicker
             <View className="bg-muted h-12 w-12 items-center justify-center rounded-xl">
               <Icon as={Database} className="text-muted-foreground size-6" />
             </View>
-            <Text className="text-foreground text-[15px] font-semibold tracking-[-0.01em]">
-              No models installed
-            </Text>
-            <Text className="text-muted-foreground text-center text-sm">
+            <RowTitle>No models installed</RowTitle>
+            <Caption className="text-center leading-relaxed">
               Download a model to start chatting locally.
-            </Text>
+            </Caption>
           </View>
         )}
 
         <View className="border-border border-t" style={{ paddingBottom: insets.bottom }}>
           <Button variant="ghost" onPress={onBrowseModels}>
             <Icon as={Database} className="text-muted-foreground size-4" />
-            <Text className="text-foreground flex-1 text-sm font-medium">Browse more models</Text>
+            <RowTitle className="flex-1">Browse more models</RowTitle>
             <Icon as={ChevronRight} className="text-muted-foreground size-4" />
           </Button>
         </View>

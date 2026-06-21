@@ -2,11 +2,13 @@ import '@/global.css';
 
 import { DownloadProvider } from '@/contexts/downloads';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
-import { NAV_THEME } from '@/lib/theme';
+import { NAV_THEME, THEME } from '@/lib/theme';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect } from 'react';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
@@ -22,10 +24,13 @@ const SCREEN_OPTIONS = {
 export default function RootLayout() {
   const { theme } = useUniwind();
   const { isReady } = useSplashScreen();
+  const activeTheme = theme ?? 'light';
+
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(THEME[activeTheme].background);
+  }, [activeTheme]);
 
   if (!isReady) return null;
-
-  const activeTheme = theme ?? 'light';
 
   return (
     <ThemeProvider value={NAV_THEME[activeTheme]}>

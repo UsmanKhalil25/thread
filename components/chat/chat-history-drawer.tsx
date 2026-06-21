@@ -2,7 +2,7 @@ import { SearchInput } from '@/components/chat/search-input';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
-import { Text } from '@/components/ui/text';
+import { Caption, RowTitle } from '@/components/ui/typography';
 import { FlashList } from '@shopify/flash-list';
 import { ChevronRight, Plus, Settings, X } from 'lucide-react-native';
 import { useCallback } from 'react';
@@ -48,11 +48,7 @@ interface ChatHistoryDrawerProps {
 }
 
 function SectionHeader({ label }: { label: string }) {
-  return (
-    <Text className="text-muted-foreground px-1.5 pt-3 pb-1 font-mono text-xs font-medium uppercase">
-      {label}
-    </Text>
-  );
+  return <Caption className="px-1.5 pt-3 pb-1 uppercase">{label}</Caption>;
 }
 
 function ChatRow({ chat, onSelectChat }: { chat: Chat; onSelectChat?: (id: string) => void }) {
@@ -60,19 +56,15 @@ function ChatRow({ chat, onSelectChat }: { chat: Chat; onSelectChat?: (id: strin
   return (
     <Pressable
       onPress={handlePress}
-      className={`flex-row items-center justify-between rounded-lg px-2 py-2.5 ${
-        chat.active ? 'bg-card' : ''
+      className={`flex-row items-center justify-between rounded-xl border px-3 py-2.5 ${
+        chat.active ? 'border-border bg-card' : 'border-transparent'
       }`}>
-      <Text
-        className={`flex-1 text-sm ${
-          chat.active ? 'text-foreground font-medium' : 'text-muted-foreground font-normal'
-        }`}
+      <RowTitle
+        className={`flex-1 ${chat.active ? 'text-foreground' : 'text-muted-foreground'}`}
         numberOfLines={1}>
         {chat.title}
-      </Text>
-      <Text className="text-muted-foreground ml-2 shrink-0 font-mono text-[10.5px]">
-        {chat.time}
-      </Text>
+      </RowTitle>
+      <Caption className="ml-2 shrink-0">{chat.time}</Caption>
     </Pressable>
   );
 }
@@ -119,7 +111,7 @@ export function ChatHistoryDrawer({
               onPress={onNewChat}
               className="border-border bg-card flex-row items-center gap-1.5 rounded-lg border px-3 py-2 active:opacity-70">
               <Icon as={Plus} className="text-foreground" size={12} />
-              <Text className="text-foreground text-[12px] font-medium">New chat</Text>
+              <RowTitle className="text-xs">New chat</RowTitle>
             </Pressable>
           </SheetHeader>
 
@@ -140,14 +132,12 @@ export function ChatHistoryDrawer({
               onPress={onSettings}
               className="flex-row items-center gap-3 py-2 active:opacity-70">
               <Icon as={Settings} className="text-muted-foreground size-5" />
-              <Text className="text-foreground flex-1 text-sm">Settings</Text>
+              <RowTitle className="flex-1">Settings</RowTitle>
               <Icon as={ChevronRight} className="text-muted-foreground size-4" />
             </Pressable>
 
             <View className="flex-row items-center gap-1.5 pt-1">
-              <Text className="text-muted-foreground font-mono text-[11px]">
-                on-device · private · offline
-              </Text>
+              <Caption>on-device · private · offline</Caption>
             </View>
           </SheetFooter>
         </SafeAreaView>

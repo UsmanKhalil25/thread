@@ -28,6 +28,7 @@ export default function SettingsLayout() {
 
       headerStyle: { backgroundColor: colors.background },
       headerShadowVisible: false,
+      animation: 'ios_from_right' as const,
     }),
     [colors.background, headerLeft]
   );

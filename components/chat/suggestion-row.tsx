@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
+import { RowTitle } from '@/components/ui/typography';
 import { ChevronRight } from 'lucide-react-native';
 import { View } from 'react-native';
 
@@ -17,7 +17,7 @@ export function SuggestionRow({ icon, label, onPress }: SuggestionRowProps) {
       onPress={onPress}
       className="bg-card border-border w-full justify-start rounded-xl border">
       <Icon as={icon} className="text-muted-foreground size-5" />
-      <Text className="text-foreground text-sm font-medium">{label}</Text>
+      <RowTitle>{label}</RowTitle>
       <View className="flex-1" />
       <Icon as={ChevronRight} className="text-muted-foreground size-4" />
     </Button>
