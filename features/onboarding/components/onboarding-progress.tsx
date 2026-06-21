@@ -1,5 +1,5 @@
 import { Caption } from '@/components/ui/typography';
-import { useOnboarding } from '@/contexts/onboarding';
+import { useOnboarding } from '@/features/onboarding/contexts/onboarding-context';
 import { cn } from '@/lib/utils';
 import { View } from 'react-native';
 

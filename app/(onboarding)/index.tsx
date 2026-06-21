@@ -1,4 +1,4 @@
-import { OnboardingButton } from '@/components/onboarding/onboarding-button';
+import { OnboardingButton } from '@/features/onboarding/components/onboarding-button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Subtitle, Title } from '@/components/ui/typography';

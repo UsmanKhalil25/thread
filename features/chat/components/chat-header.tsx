@@ -1,7 +1,7 @@
-import { useChat } from '@/contexts/chat';
-import { ANDROID_MODELS } from '@/lib/models';
+import { MODEL_CATALOG } from '@/lib/models';
 import { Text } from '@/components/ui/text';
 import { Badge } from '@/components/ui/badge';
+import { useChat } from '@/features/chat/contexts/chat-context';
 import { Pressable } from 'react-native';
 
 interface ChatHeaderProps {
@@ -10,7 +10,7 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ onPress }: ChatHeaderProps) {
   const { selectedModelId } = useChat();
-  const model = ANDROID_MODELS.find((m) => m.id === selectedModelId);
+  const model = MODEL_CATALOG.find((m) => m.id === selectedModelId);
 
   return (
     <Pressable onPress={onPress}>

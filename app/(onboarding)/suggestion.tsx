@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Caption, RowTitle, SectionTitle, Subtitle } from '@/components/ui/typography';
-import { markOnboardingComplete } from '@/lib/db';
+import { markOnboardingComplete } from '@/db/repositories/preferences.repository';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'expo-router';
 import { MoveRight } from 'lucide-react-native';

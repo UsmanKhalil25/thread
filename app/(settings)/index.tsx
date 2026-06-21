@@ -1,5 +1,5 @@
-import { SettingsGroup } from '@/components/settings/settings-group';
-import { SettingsRow } from '@/components/settings/settings-row';
+import { SettingsGroup } from '@/features/settings/components/settings-group';
+import { SettingsRow } from '@/features/settings/components/settings-row';
 import {
   Select,
   SelectContent,

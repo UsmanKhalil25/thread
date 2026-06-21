@@ -3,12 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
-import { db } from '@/db/client';
-import { modelsTable } from '@/db/schema';
-import { useChat } from '@/contexts/chat';
 import { useDownloads } from '@/contexts/downloads';
-import { ANDROID_MODELS, type ModelDefinition } from '@/lib/models';
-import { eq } from 'drizzle-orm';
+import { listInstalledModelIds } from '@/db/repositories/models.repository';
+import { useChat } from '@/features/chat/contexts/chat-context';
+import { MODEL_CATALOG, type CatalogModel } from '@/lib/models';
 import { ChevronRight, Database } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
@@ -25,21 +23,19 @@ export function ModelPickerDrawer({ open, onClose, onBrowseModels }: ModelPicker
   const { state: downloadState } = useDownloads();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const [installedModels, setInstalledModels] = useState<ModelDefinition[]>([]);
+  const [installedModels, setInstalledModels] = useState<CatalogModel[]>([]);
   const sheetMaxHeight = Math.round(height * 0.82);
   const listMaxHeight = Math.round(height * 0.46);
 
   useEffect(() => {
     let cancelled = false;
 
-    db.select({ id: modelsTable.id })
-      .from(modelsTable)
-      .where(eq(modelsTable.status, 'installed'))
-      .then((rows) => {
+    listInstalledModelIds()
+      .then((ids) => {
         if (cancelled) return;
 
-        const ids = new Set(rows.map((r) => r.id));
-        setInstalledModels(ANDROID_MODELS.filter((m) => ids.has(m.id)));
+        const installedIds = new Set(ids);
+        setInstalledModels(MODEL_CATALOG.filter((m) => installedIds.has(m.id)));
       })
       .catch(() => {
         if (!cancelled) setInstalledModels([]);

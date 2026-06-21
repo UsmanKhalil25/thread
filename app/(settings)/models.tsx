@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { SearchInput } from '@/components/ui/search-input';
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { useDownloads } from '@/contexts/downloads';
-import { ANDROID_MODELS, type ModelDefinition } from '@/lib/models';
+import { MODEL_CATALOG, type CatalogModel } from '@/lib/models';
 import type { Model } from '@/types/entities/model';
 import { Stack } from 'expo-router';
 import { ArrowDownToLine, Check, X } from 'lucide-react-native';
@@ -29,7 +29,7 @@ function formatSpeed(bytesPerSec: number): string {
 }
 
 interface DownloadableModelRowProps {
-  model: ModelDefinition;
+  model: CatalogModel;
   entry: Model | undefined;
   isLast?: boolean;
   onGet: () => void;
@@ -100,7 +100,7 @@ export default function ModelsScreen() {
   const { state, start, cancel } = useDownloads();
   const insets = useSafeAreaInsets();
 
-  const filtered = ANDROID_MODELS.filter((model) => {
+  const filtered = MODEL_CATALOG.filter((model) => {
     const matchesQuery =
       query.length === 0 ||
       model.name.toLowerCase().includes(query.toLowerCase()) ||

@@ -1,4 +1,4 @@
-import { OnboardingButton } from '@/components/onboarding/onboarding-button';
+import { OnboardingButton } from '@/features/onboarding/components/onboarding-button';
 import { Icon } from '@/components/ui/icon';
 import { RowTitle, ScreenTitle, Subtitle } from '@/components/ui/typography';
 import { Archive, Laptop, Lock, Shield } from 'lucide-react-native';

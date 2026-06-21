@@ -1,9 +1,9 @@
-import { ChatHistoryDrawer } from '@/components/chat/chat-history-drawer';
-import { ChatHeader } from '@/components/chat/chat-header';
-import { ModelPickerDrawer } from '@/components/chat/model-picker-drawer';
-import { ChatProvider } from '@/contexts/chat';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { ChatHistoryDrawer } from '@/features/chat/components/chat-history-drawer';
+import { ChatHeader } from '@/features/chat/components/chat-header';
+import { ModelPickerDrawer } from '@/features/chat/components/model-picker-drawer';
+import { ChatProvider } from '@/features/chat/contexts/chat-context';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { Menu } from 'lucide-react-native';

@@ -1,4 +1,4 @@
-import { hasCompletedOnboarding } from '@/lib/db';
+import { hasCompletedOnboarding } from '@/db/repositories/preferences.repository';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 

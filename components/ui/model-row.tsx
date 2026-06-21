@@ -1,10 +1,10 @@
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
-import type { ModelDefinition } from '@/types/models';
+import type { CatalogModel } from '@/types/model-catalog';
 import { Pressable, View } from 'react-native';
 
 interface ModelRowProps {
-  model: ModelDefinition;
+  model: CatalogModel;
   selected?: boolean;
   onPress?: () => void;
 }

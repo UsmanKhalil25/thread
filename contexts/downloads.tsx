@@ -1,8 +1,13 @@
-import { db } from '@/db/client';
-import { modelsTable } from '@/db/schema';
-import { ANDROID_MODELS, modelDownloadUrl, type ModelDefinition } from '@/lib/models';
+import {
+  deletePersistedModel,
+  listPersistedModels,
+  markModelError,
+  markModelInstalled,
+  updateModelDownloadProgress,
+  upsertDownloadingModel,
+} from '@/db/repositories/models.repository';
+import { MODEL_CATALOG, modelDownloadUrl, type CatalogModel } from '@/lib/models';
 import type { Model } from '@/types/entities/model';
-import { eq } from 'drizzle-orm';
 import {
   createDownloadResumable,
   deleteAsync,
@@ -22,7 +27,7 @@ import {
 
 interface DownloadsContextValue {
   state: Record<string, Model>;
-  start: (model: ModelDefinition) => void;
+  start: (model: CatalogModel) => void;
   cancel: (modelId: string) => void;
 }
 
@@ -37,125 +42,108 @@ const MODELS_DIR = (documentDirectory ?? '') + 'models/';
 export function DownloadProvider({ children }: PropsWithChildren) {
   const [state, setState] = useState<Record<string, Model>>({});
   const resumables = useRef<Record<string, DownloadResumable>>({});
-  // Tracks last {bytes, time} per model for speed calculation
   const speedTrackers = useRef<Record<string, { bytes: number; time: number }>>({});
-
-  useEffect(() => {
-    async function init() {
-      const rows = await db.select().from(modelsTable);
-      if (rows.length === 0) return;
-
-      const initial: Record<string, Model> = {};
-      for (const row of rows) {
-        initial[row.id] = {
-          id: row.id,
-          status: row.status,
-          progress: (row.progress ?? 0) * 100,
-          localPath: row.localPath ?? undefined,
-          errorMessage: row.errorMessage ?? undefined,
-          createdAt: row.createdAt ?? new Date(),
-          updatedAt: row.updatedAt ?? new Date(),
-        };
-      }
-      setState(initial);
-
-      await makeDirectoryAsync(MODELS_DIR, { intermediates: true }).catch(() => {});
-
-      for (const row of rows) {
-        if (row.status === 'downloading' && row.resumeData) {
-          attachResumable(row.id, row.resumeData);
-        }
-      }
-    }
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const updateState = useCallback((modelId: string, patch: Partial<Model>) => {
     setState((prev) => ({ ...prev, [modelId]: { ...prev[modelId], ...patch } as Model }));
   }, []);
 
-  function attachResumable(modelId: string, resumeDataJson: string) {
-    const saved = JSON.parse(resumeDataJson) as {
-      url: string;
-      fileUri: string;
-      options: object;
-      resumeData?: string;
-    };
-    let lastPersistedPct = -1;
+  const attachResumable = useCallback(
+    (modelId: string, resumeDataJson: string) => {
+      const saved = JSON.parse(resumeDataJson) as {
+        url: string;
+        fileUri: string;
+        options: object;
+        resumeData?: string;
+      };
+      let lastPersistedPct = -1;
 
-    const resumable = createDownloadResumable(
-      saved.url,
-      saved.fileUri,
-      saved.options,
-      async ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
-        if (totalBytesExpectedToWrite <= 0) return;
-        const ratio = totalBytesWritten / totalBytesExpectedToWrite;
-        const pct = Math.round(ratio * 100);
+      const resumable = createDownloadResumable(
+        saved.url,
+        saved.fileUri,
+        saved.options,
+        async ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
+          if (totalBytesExpectedToWrite <= 0) return;
+          const ratio = totalBytesWritten / totalBytesExpectedToWrite;
+          const pct = Math.round(ratio * 100);
 
-        // Speed calculation — update tracker every second
-        const now = Date.now();
-        const tracker = speedTrackers.current[modelId];
-        let speed: number | undefined;
-        if (tracker && now - tracker.time >= 1000) {
-          speed = (totalBytesWritten - tracker.bytes) / ((now - tracker.time) / 1000);
-          speedTrackers.current[modelId] = { bytes: totalBytesWritten, time: now };
-        } else if (!tracker) {
-          speedTrackers.current[modelId] = { bytes: totalBytesWritten, time: now };
-        }
+          const now = Date.now();
+          const tracker = speedTrackers.current[modelId];
+          let speed: number | undefined;
+          if (tracker && now - tracker.time >= 1000) {
+            speed = (totalBytesWritten - tracker.bytes) / ((now - tracker.time) / 1000);
+            speedTrackers.current[modelId] = { bytes: totalBytesWritten, time: now };
+          } else if (!tracker) {
+            speedTrackers.current[modelId] = { bytes: totalBytesWritten, time: now };
+          }
 
-        updateState(modelId, {
-          progress: pct,
-          bytesWritten: totalBytesWritten,
-          totalBytes: totalBytesExpectedToWrite,
-          ...(speed !== undefined && { speed }),
+          updateState(modelId, {
+            progress: pct,
+            bytesWritten: totalBytesWritten,
+            totalBytes: totalBytesExpectedToWrite,
+            ...(speed !== undefined && { speed }),
+          });
+
+          if (pct - lastPersistedPct >= 5) {
+            lastPersistedPct = pct;
+            const savable = resumable.savable();
+            await updateModelDownloadProgress(modelId, ratio, JSON.stringify(savable));
+          }
+        },
+        saved.resumeData
+      );
+
+      resumables.current[modelId] = resumable;
+
+      resumable
+        .downloadAsync()
+        .then(async (result) => {
+          if (!result) return;
+          delete resumables.current[modelId];
+          delete speedTrackers.current[modelId];
+          updateState(modelId, {
+            status: 'installed',
+            progress: 100,
+            localPath: result.uri,
+            speed: undefined,
+          });
+          await markModelInstalled(modelId, result.uri);
+        })
+        .catch(async (err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          delete resumables.current[modelId];
+          delete speedTrackers.current[modelId];
+          updateState(modelId, { status: 'error', errorMessage: msg, speed: undefined });
+          await markModelError(modelId, msg);
         });
+    },
+    [updateState]
+  );
 
-        if (pct - lastPersistedPct >= 5) {
-          lastPersistedPct = pct;
-          const savable = resumable.savable();
-          await db
-            .update(modelsTable)
-            .set({ progress: ratio, resumeData: JSON.stringify(savable) })
-            .where(eq(modelsTable.id, modelId));
+  useEffect(() => {
+    async function init() {
+      const models = await listPersistedModels();
+      if (models.length === 0) return;
+
+      const initial: Record<string, Model> = {};
+      for (const model of models) {
+        initial[model.id] = model;
+      }
+      setState(initial);
+
+      await makeDirectoryAsync(MODELS_DIR, { intermediates: true }).catch(() => {});
+
+      for (const model of models) {
+        if (model.status === 'downloading' && model.resumeData) {
+          attachResumable(model.id, model.resumeData);
         }
-      },
-      saved.resumeData
-    );
-
-    resumables.current[modelId] = resumable;
-
-    resumable
-      .downloadAsync()
-      .then(async (result) => {
-        if (!result) return;
-        delete resumables.current[modelId];
-        delete speedTrackers.current[modelId];
-        updateState(modelId, {
-          status: 'installed',
-          progress: 100,
-          localPath: result.uri,
-          speed: undefined,
-        });
-        await db
-          .update(modelsTable)
-          .set({ status: 'installed', progress: 1, localPath: result.uri, resumeData: null })
-          .where(eq(modelsTable.id, modelId));
-      })
-      .catch(async (err) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        delete resumables.current[modelId];
-        delete speedTrackers.current[modelId];
-        updateState(modelId, { status: 'error', errorMessage: msg, speed: undefined });
-        await db
-          .update(modelsTable)
-          .set({ status: 'error', errorMessage: msg })
-          .where(eq(modelsTable.id, modelId));
-      });
-  }
+      }
+    }
+    init();
+  }, [attachResumable]);
 
   const start = useCallback(
-    async (model: ModelDefinition) => {
+    async (model: CatalogModel) => {
       if (resumables.current[model.id]) return;
 
       await makeDirectoryAsync(MODELS_DIR, { intermediates: true }).catch(() => {});
@@ -164,13 +152,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       const url = modelDownloadUrl(model);
       const options = {};
 
-      await db
-        .insert(modelsTable)
-        .values({ id: model.id, status: 'downloading', progress: 0 })
-        .onConflictDoUpdate({
-          target: modelsTable.id,
-          set: { status: 'downloading', progress: 0, resumeData: null, errorMessage: null },
-        });
+      await upsertDownloadingModel(model.id);
 
       updateState(model.id, {
         id: model.id,
@@ -181,7 +163,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       });
       attachResumable(model.id, JSON.stringify({ url, fileUri, options }));
     },
-    [updateState]
+    [attachResumable, updateState]
   );
 
   const cancel = useCallback(async (modelId: string) => {
@@ -198,10 +180,9 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       return next;
     });
 
-    await db.delete(modelsTable).where(eq(modelsTable.id, modelId));
+    await deletePersistedModel(modelId);
 
-    // Delete partial file using known path derived from model filename
-    const model = ANDROID_MODELS.find((m) => m.id === modelId);
+    const model = MODEL_CATALOG.find((m) => m.id === modelId);
     if (model) {
       await deleteAsync(MODELS_DIR + model.filename, { idempotent: true }).catch(() => {});
     }

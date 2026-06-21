@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const DeviceTierSchema = z.enum(['any', '6gb', '8gb']);
 
-export const ModelDefinitionSchema = z.object({
+export const CatalogModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   initial: z.string().length(1),
@@ -19,7 +19,7 @@ export const ModelDefinitionSchema = z.object({
   description: z.string(),
 });
 
-export const AndroidModelsSchema = z.array(ModelDefinitionSchema);
+export const CatalogModelsSchema = z.array(CatalogModelSchema);
 
 export type DeviceTier = z.infer<typeof DeviceTierSchema>;
-export type ModelDefinition = z.infer<typeof ModelDefinitionSchema>;
+export type CatalogModel = z.infer<typeof CatalogModelSchema>;

@@ -1,5 +1,5 @@
-import { ChatInput } from '@/components/chat/chat-input';
-import { useGreeting } from '@/hooks/use-greeting';
+import { ChatInput } from '@/features/chat/components/chat-input';
+import { useGreeting } from '@/features/chat/hooks/use-greeting';
 import { ScreenTitle, Subtitle } from '@/components/ui/typography';
 import { StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';

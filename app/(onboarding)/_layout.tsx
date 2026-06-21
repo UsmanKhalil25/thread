@@ -1,11 +1,12 @@
-import { OnboardingProgress } from '@/components/onboarding/onboarding-progress';
-import { OnboardingProvider } from '@/contexts/onboarding';
+import { OnboardingProgress } from '@/features/onboarding/components/onboarding-progress';
+import { OnboardingProvider } from '@/features/onboarding/contexts/onboarding-context';
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_OPTIONS = {
   headerShown: false,
+  animation: 'fade',
 } as const;
 
 export default function OnboardingLayout() {
