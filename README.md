@@ -1,3 +1,14 @@
+## Running on a USB-connected Android device
+
+If `bun android` shows the Expo Go "Something went wrong" screen instead of loading the app, the device's loopback port forwarding to Metro is missing or stale:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081" host.exp.exponent
+```
+
+The first command forwards the device's `localhost:8081` to your machine's Metro server over USB. The second relaunches Expo Go pointed at that address.
+
 ## Building APK Files
 
 To generate an APK file for Android distribution or testing:
