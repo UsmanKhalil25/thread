@@ -18,7 +18,8 @@ const OnboardingContext = createContext<OnboardingContextValue>({ step: 1, total
 
 export function OnboardingProvider({ children }: PropsWithChildren) {
   const segments = useSegments();
-  const currentSegment = segments[segments.length - 1] ?? 'index';
+  const last = segments[segments.length - 1];
+  const currentSegment = !last || last === '(onboarding)' ? 'index' : last;
   const step = STEPS[currentSegment] ?? 1;
 
   return (

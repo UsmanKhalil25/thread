@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_OPTIONS = {
   headerShown: false,
-};
+  animation: 'fade',
+} as const;
 
 export default function OnboardingLayout() {
   return (

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { Caption, RowTitle, SectionTitle, Subtitle } from '@/components/ui/typography';
 import { markOnboardingComplete } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'expo-router';
@@ -56,9 +57,11 @@ function ModelAvatar({
     <View
       className={cn('items-center justify-center rounded-lg', isSm ? 'h-8 w-8' : 'h-10 w-10')}
       style={{ backgroundColor: color }}>
-      <Text className={cn('font-semibold text-white', isSm ? 'text-xs' : 'text-sm')}>
-        {initial}
-      </Text>
+      {isSm ? (
+        <Caption className="text-white">{initial}</Caption>
+      ) : (
+        <RowTitle className="text-white">{initial}</RowTitle>
+      )}
     </View>
   );
 }
@@ -66,7 +69,7 @@ function ModelAvatar({
 function SpeedBadge({ speed }: { speed: string }) {
   return (
     <View className="flex-row items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1">
-      <Text className="text-xs font-medium text-emerald-500">{speed} t/s</Text>
+      <Caption className="text-emerald-500">{speed} t/s</Caption>
     </View>
   );
 }
@@ -84,52 +87,42 @@ export default function SuggestionScreen() {
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 24 }}>
+        contentContainerStyle={{ paddingTop: 32 }}>
         <View className="gap-6">
           <View className="gap-1">
-            <Text className="text-foreground text-left text-2xl font-bold tracking-tight">
-              Recommended for your device
-            </Text>
-            <Text className="text-muted-foreground font-mono text-sm leading-relaxed">
-              Balanced quality vs. speed for the iPhone 16 Pro.
-            </Text>
+            <SectionTitle>Recommended for your device</SectionTitle>
+            <Subtitle>Balanced quality vs. speed for the iPhone 16 Pro.</Subtitle>
           </View>
 
           <View className="bg-card border-border relative gap-4 rounded-2xl border p-4">
             <View className="flex-row items-center gap-3">
               <ModelAvatar initial={RECOMMENDED.initial} color={RECOMMENDED.avatarColor} />
               <View className="flex-1 gap-0.5 pr-16">
-                <Text className="text-foreground text-sm font-semibold">{RECOMMENDED.name}</Text>
-                <Text className="text-muted-foreground text-xs">{RECOMMENDED.meta}</Text>
+                <RowTitle>{RECOMMENDED.name}</RowTitle>
+                <Caption className="leading-relaxed">{RECOMMENDED.meta}</Caption>
               </View>
             </View>
 
             <View className="flex-row gap-4">
               <View className="flex-1 gap-1">
-                <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                  Speed
-                </Text>
+                <Caption>Speed</Caption>
                 <View className="flex-row items-baseline gap-0.5">
-                  <Text className="text-foreground text-lg font-bold">{RECOMMENDED.speed}</Text>
-                  <Text className="text-muted-foreground text-xs">t/s</Text>
+                  <RowTitle>{RECOMMENDED.speed}</RowTitle>
+                  <Caption>t/s</Caption>
                 </View>
               </View>
               <View className="flex-1 gap-1">
-                <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                  RAM
-                </Text>
+                <Caption>RAM</Caption>
                 <View className="flex-row items-baseline gap-0.5">
-                  <Text className="text-foreground text-lg font-bold">{RECOMMENDED.ram}</Text>
-                  <Text className="text-muted-foreground text-xs">GB</Text>
+                  <RowTitle>{RECOMMENDED.ram}</RowTitle>
+                  <Caption>GB</Caption>
                 </View>
               </View>
               <View className="flex-1 gap-1">
-                <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                  Quality
-                </Text>
+                <Caption>Quality</Caption>
                 <View className="flex-row items-baseline gap-0.5">
-                  <Text className="text-foreground text-lg font-bold">{RECOMMENDED.quality}</Text>
-                  <Text className="text-muted-foreground text-xs">MMLU</Text>
+                  <RowTitle>{RECOMMENDED.quality}</RowTitle>
+                  <Caption>MMLU</Caption>
                 </View>
               </View>
             </View>
@@ -137,24 +130,22 @@ export default function SuggestionScreen() {
             <View className="flex-row flex-wrap gap-2">
               {RECOMMENDED.tags.map((tag) => (
                 <View key={tag} className="bg-secondary rounded-md px-2.5 py-1">
-                  <Text className="text-secondary-foreground text-xs">{tag}</Text>
+                  <Caption className="text-secondary-foreground">{tag}</Caption>
                 </View>
               ))}
             </View>
           </View>
 
           <View className="gap-3">
-            <Text className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-              Alternatives
-            </Text>
+            <Caption>Alternatives</Caption>
             {ALTERNATIVES.map((alt) => (
               <View
                 key={alt.name}
                 className="bg-card border-border flex-row items-center gap-3 rounded-xl border p-3">
                 <ModelAvatar initial={alt.initial} color={alt.avatarColor} size="sm" />
                 <View className="flex-1 gap-0.5">
-                  <Text className="text-foreground text-sm font-medium">{alt.name}</Text>
-                  <Text className="text-muted-foreground text-xs">{alt.meta}</Text>
+                  <RowTitle>{alt.name}</RowTitle>
+                  <Caption className="leading-relaxed">{alt.meta}</Caption>
                 </View>
                 <SpeedBadge speed={alt.speed} />
               </View>

@@ -1,6 +1,6 @@
 import { OnboardingButton } from '@/components/onboarding/onboarding-button';
 import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
+import { RowTitle, ScreenTitle, Subtitle } from '@/components/ui/typography';
 import { Archive, Laptop, Lock, Shield } from 'lucide-react-native';
 import { ScrollView, View } from 'react-native';
 
@@ -42,8 +42,8 @@ function FeatureRow({
         <Icon as={icon} className="text-muted-foreground size-5" />
       </View>
       <View className="flex-1 gap-0.5">
-        <Text className="text-foreground text-sm font-semibold">{title}</Text>
-        <Text className="text-muted-foreground font-mono text-xs leading-relaxed">{subtitle}</Text>
+        <RowTitle>{title}</RowTitle>
+        <Subtitle className="text-xs">{subtitle}</Subtitle>
       </View>
     </View>
   );
@@ -58,12 +58,8 @@ export default function PrivacyScreen() {
         contentContainerStyle={{ paddingTop: 32 }}>
         <View className="gap-6">
           <View className="gap-2">
-            <Text className="text-foreground text-left text-3xl font-bold tracking-tight">
-              Your chats never leave the device.
-            </Text>
-            <Text className="text-muted-foreground font-mono text-base leading-relaxed">
-              Models run locally, embeddings stay local, your data is yours.
-            </Text>
+            <ScreenTitle>Your chats never leave the device.</ScreenTitle>
+            <Subtitle>Models run locally, embeddings stay local, your data is yours.</Subtitle>
           </View>
 
           <View className="gap-3 pt-2">

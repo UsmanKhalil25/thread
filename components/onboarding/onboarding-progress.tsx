@@ -1,4 +1,4 @@
-import { Text } from '@/components/ui/text';
+import { Caption } from '@/components/ui/typography';
 import { useOnboarding } from '@/contexts/onboarding';
 import { cn } from '@/lib/utils';
 import { View } from 'react-native';
@@ -31,15 +31,15 @@ function Dots() {
 function Counter() {
   const { step, total } = useOnboarding();
   return (
-    <Text className="text-muted-foreground font-mono text-xs">
+    <Caption>
       {step} / {total}
-    </Text>
+    </Caption>
   );
 }
 
 export function OnboardingProgress() {
   return (
-    <View className="bg-background flex-row items-center justify-between px-4 py-3">
+    <View className="bg-background flex-row items-center justify-between px-6 py-3">
       <Dots />
       <Counter />
     </View>

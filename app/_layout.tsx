@@ -2,12 +2,11 @@ import '@/global.css';
 
 import { DownloadProvider } from '@/contexts/downloads';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
-import { NAV_THEME, THEME } from '@/lib/theme';
+import { NAV_THEME } from '@/lib/theme';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
@@ -18,7 +17,7 @@ SplashScreen.preventAutoHideAsync();
 
 const SCREEN_OPTIONS = {
   headerShown: false,
-};
+} as const;
 
 export default function RootLayout() {
   const { theme } = useUniwind();
@@ -26,19 +25,18 @@ export default function RootLayout() {
 
   if (!isReady) return null;
 
+  const activeTheme = theme ?? 'light';
+
   return (
-    <SafeAreaProvider
-      initialMetrics={initialWindowMetrics}
-      style={{ backgroundColor: THEME[theme ?? 'light'].background }}>
-      <KeyboardProvider>
-        <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+    <ThemeProvider value={NAV_THEME[activeTheme]}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <KeyboardProvider>
           <DownloadProvider>
-            <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
             <Stack screenOptions={SCREEN_OPTIONS} />
             <PortalHost />
           </DownloadProvider>
-        </ThemeProvider>
-      </KeyboardProvider>
-    </SafeAreaProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
