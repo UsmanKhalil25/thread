@@ -1,6 +1,6 @@
 import '@/global.css';
 
-import { DownloadProvider } from '@/contexts/downloads';
+import { useModelDownloadReconciliation } from '@/features/models/hooks/use-downloads';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { NAV_THEME, THEME } from '@/lib/theme';
 import { ThemeProvider } from '@react-navigation/native';
@@ -26,6 +26,7 @@ export default function RootLayout() {
   const { theme } = useUniwind();
   const { isReady } = useSplashScreen();
   const activeTheme = theme ?? 'light';
+  useModelDownloadReconciliation(!!isReady);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(THEME[activeTheme].background);
@@ -37,10 +38,8 @@ export default function RootLayout() {
     <ThemeProvider value={NAV_THEME[activeTheme]}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <KeyboardProvider>
-          <DownloadProvider>
-            <Stack screenOptions={SCREEN_OPTIONS} />
-            <PortalHost />
-          </DownloadProvider>
+          <Stack screenOptions={SCREEN_OPTIONS} />
+          <PortalHost />
         </KeyboardProvider>
       </SafeAreaProvider>
     </ThemeProvider>

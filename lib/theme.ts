@@ -20,6 +20,7 @@ export const THEME = {
     border: '#e4e4e7',
     input: '#e4e4e7',
     ring: '#a1a1aa',
+    radius: 10,
   },
   dark: {
     // Design system zinc palette
@@ -41,6 +42,7 @@ export const THEME = {
     border: '#1f1f23', // zinc-850
     input: '#2a2a2f',
     ring: 'rgba(255,255,255,0.06)',
+    radius: 10,
   },
 };
 

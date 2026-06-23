@@ -1,2 +1,2 @@
-export * from './models';
+export * from './model-downloads';
 export * from './preferences';

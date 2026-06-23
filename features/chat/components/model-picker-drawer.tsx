@@ -3,12 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
-import { useDownloads } from '@/contexts/downloads';
-import { listInstalledModelIds } from '@/db/repositories/models.repository';
 import { useChat } from '@/features/chat/contexts/chat-context';
+import { useModelDownloads } from '@/features/models/hooks/use-downloads';
 import { MODEL_CATALOG, type CatalogModel } from '@/lib/models';
 import { ChevronRight, Database } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,31 +19,15 @@ interface ModelPickerDrawerProps {
 
 export function ModelPickerDrawer({ open, onClose, onBrowseModels }: ModelPickerDrawerProps) {
   const { selectedModelId, setSelectedModelId } = useChat();
-  const { state: downloadState } = useDownloads();
+  const downloads = useModelDownloads();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const [installedModels, setInstalledModels] = useState<CatalogModel[]>([]);
   const sheetMaxHeight = Math.round(height * 0.82);
   const listMaxHeight = Math.round(height * 0.46);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    listInstalledModelIds()
-      .then((ids) => {
-        if (cancelled) return;
-
-        const installedIds = new Set(ids);
-        setInstalledModels(MODEL_CATALOG.filter((m) => installedIds.has(m.id)));
-      })
-      .catch(() => {
-        if (!cancelled) setInstalledModels([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [downloadState]);
+  const installedModels = useMemo<CatalogModel[]>(
+    () => MODEL_CATALOG.filter((model) => downloads[model.id]?.status === 'ready'),
+    [downloads]
+  );
 
   const handleOpenChange = useCallback(
     (v: boolean) => {

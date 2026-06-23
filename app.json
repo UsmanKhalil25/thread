@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "minimal",
-    "slug": "minimal",
+    "name": "thread",
+    "slug": "thread",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "minimal",
+    "scheme": "thread",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.minimal"
+      "bundleIdentifier": "com.anonymous.thread"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.minimal"
+      "package": "com.anonymous.thread"
     },
     "web": {
       "bundler": "metro",
@@ -49,7 +49,17 @@
         }
       ],
       "expo-image",
-      "expo-sqlite"
+      "expo-sqlite",
+      "@kesha-antonov/react-native-background-downloader",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
