@@ -6,7 +6,6 @@ import { Caption, RowTitle } from '@/components/ui/typography';
 import { useDownloads } from '@/contexts/downloads';
 import { MODEL_CATALOG, type CatalogModel } from '@/lib/models';
 import type { Model } from '@/types/entities/model';
-import { Stack } from 'expo-router';
 import { ArrowDownToLine, Check, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -116,8 +115,6 @@ export default function ModelsScreen() {
 
   return (
     <View className="bg-background flex-1">
-      <Stack.Screen options={{ headerTitle: 'Models' }} />
-
       <SearchInput placeholder="Search models" value={query} onChangeText={setQuery} />
 
       <ScrollView
