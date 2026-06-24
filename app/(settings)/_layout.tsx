@@ -2,8 +2,6 @@ import { useTheme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 
-export const unstable_settings = { initialRouteName: 'index' };
-
 export default function SettingsLayout() {
   const { colors } = useTheme();
 
