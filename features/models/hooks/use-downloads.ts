@@ -16,10 +16,19 @@ import {
   setConfig,
   type DownloadTask,
 } from '@kesha-antonov/react-native-background-downloader';
-import { deleteAsync, getInfoAsync, makeDirectoryAsync, moveAsync } from 'expo-file-system/legacy';
+import {
+  deleteAsync,
+  EncodingType,
+  getInfoAsync,
+  makeDirectoryAsync,
+  moveAsync,
+  readAsStringAsync,
+} from 'expo-file-system/legacy';
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 const MAX_CONCURRENT = 1;
+const GGUF_MAGIC_BASE64 = 'R0dVRg==';
 const IDLE_DOWNLOAD = { status: 'idle' as const, downloadedBytes: 0 };
 const catalogById = new Map(MODEL_CATALOG.map((model) => [model.id, model]));
 
@@ -41,6 +50,7 @@ export type DownloadStatus = ModelDownloadStatus | 'idle';
 export interface DownloadState {
   status: DownloadStatus;
   downloadedBytes: number;
+  totalBytes?: number;
   filePath?: string;
 }
 
@@ -123,17 +133,42 @@ async function finishBackgroundTask(taskId: string) {
   await Promise.resolve(completeHandler(taskId)).catch(() => {});
 }
 
+async function ensureNotificationPermission(): Promise<void> {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 33) return;
+
+  try {
+    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  } catch {}
+}
+
 async function failDownload(model: CatalogModel, downloadedBytes = 0) {
   await deleteAsync(tempPath(model), { idempotent: true }).catch(() => {});
   await markModelDownloadFailed(model.id);
   setDownload(model.id, { status: 'failed', downloadedBytes });
 }
 
-async function completeDownload(model: CatalogModel, location: string) {
+async function isValidGgufFile(source: string): Promise<boolean> {
+  try {
+    const header = await readAsStringAsync(source, {
+      encoding: EncodingType.Base64,
+      position: 0,
+      length: 4,
+    });
+    return header === GGUF_MAGIC_BASE64;
+  } catch {
+    return false;
+  }
+}
+
+async function completeDownload(model: CatalogModel, location: string, bytesDownloaded: number) {
   const source = filePath(location);
   const info = await getInfoAsync(source);
-  if (!info.exists || info.size !== model.sizeBytes) {
-    throw new Error('Downloaded file size did not match catalog size');
+  if (!info.exists || info.size === 0 || (bytesDownloaded > 0 && info.size !== bytesDownloaded)) {
+    throw new Error('Downloaded file is missing or incomplete');
+  }
+
+  if (!(await isValidGgufFile(source))) {
+    throw new Error('Downloaded file is not a valid GGUF model');
   }
 
   await deleteAsync(finalPath(model), { idempotent: true }).catch(() => {});
@@ -157,11 +192,16 @@ function attachHandlers(task: DownloadTask, model: CatalogModel) {
       setDownload(model.id, {
         status: 'downloading',
         downloadedBytes: task.bytesDownloaded ?? lastPersistedBytes,
+        totalBytes: task.bytesTotal || undefined,
       });
       void upsertModelDownloadStatus(model.id, 'downloading', lastPersistedBytes, task.id);
     })
-    .progress(({ bytesDownloaded }) => {
-      setDownload(model.id, { status: 'downloading', downloadedBytes: bytesDownloaded });
+    .progress(({ bytesDownloaded, bytesTotal }) => {
+      setDownload(model.id, {
+        status: 'downloading',
+        downloadedBytes: bytesDownloaded,
+        totalBytes: bytesTotal || undefined,
+      });
 
       if (bytesDownloaded - lastPersistedBytes >= checkpointBytes) {
         lastPersistedBytes = bytesDownloaded;
@@ -171,7 +211,7 @@ function attachHandlers(task: DownloadTask, model: CatalogModel) {
     .done(({ location, bytesDownloaded }) => {
       void (async () => {
         try {
-          await completeDownload(model, location);
+          await completeDownload(model, location, bytesDownloaded);
         } catch {
           await failDownload(model, bytesDownloaded);
         } finally {
@@ -252,15 +292,34 @@ async function initializeModelDownloads(): Promise<void> {
 
       if (row.status === 'downloading') {
         if (!row.taskId || !liveTaskIds.has(row.taskId)) {
-          await failDownload(model, row.downloadedBytes);
-          next[row.modelId] = { status: 'failed', downloadedBytes: row.downloadedBytes };
+          const part = await getInfoAsync(tempPath(model));
+          if (part.exists && part.size > 0) {
+            if (activeDownloads.size < MAX_CONCURRENT) {
+              await resumeDownload(model, part.size);
+              next[row.modelId] = { status: 'downloading', downloadedBytes: part.size };
+            } else {
+              store.queue = [...store.queue.filter((id) => id !== row.modelId), row.modelId];
+              await upsertModelDownloadStatus(row.modelId, 'queued', part.size);
+              next[row.modelId] = { status: 'queued', downloadedBytes: part.size };
+            }
+          } else {
+            await failDownload(model, row.downloadedBytes);
+            next[row.modelId] = { status: 'failed', downloadedBytes: row.downloadedBytes };
+          }
           continue;
         }
       }
 
       if (row.status === 'queued') {
-        await failDownload(model, row.downloadedBytes);
-        next[row.modelId] = { status: 'failed', downloadedBytes: row.downloadedBytes };
+        const part = await getInfoAsync(tempPath(model));
+        if (part.exists && part.size > 0) {
+          store.queue = [...store.queue.filter((id) => id !== row.modelId), row.modelId];
+          await upsertModelDownloadStatus(row.modelId, 'queued', part.size);
+          next[row.modelId] = { status: 'queued', downloadedBytes: part.size };
+        } else {
+          await failDownload(model, row.downloadedBytes);
+          next[row.modelId] = { status: 'failed', downloadedBytes: row.downloadedBytes };
+        }
         continue;
       }
 
@@ -280,6 +339,7 @@ async function initializeModelDownloads(): Promise<void> {
       next[task.id] = {
         status: 'downloading',
         downloadedBytes: task.bytesDownloaded ?? 0,
+        totalBytes: task.bytesTotal || undefined,
       };
       await upsertModelDownloadStatus(task.id, 'downloading', task.bytesDownloaded ?? 0, task.id);
     }
@@ -301,7 +361,19 @@ function runNextDownload() {
 
   store.queue = store.queue.slice(1);
   const model = catalogById.get(modelId);
-  if (model) void runDownload(model);
+  if (model) void runQueuedDownload(model);
+}
+
+async function runQueuedDownload(model: CatalogModel) {
+  const queuedBytes = store.downloads[model.id]?.downloadedBytes ?? 0;
+  const part = queuedBytes > 0 ? await getInfoAsync(tempPath(model)) : null;
+
+  if (part?.exists && part.size > 0) {
+    await resumeDownload(model, part.size);
+    return;
+  }
+
+  await runDownload(model);
 }
 
 async function runDownload(model: CatalogModel) {
@@ -326,6 +398,28 @@ async function runDownload(model: CatalogModel) {
   task.start();
 }
 
+async function resumeDownload(model: CatalogModel, fromBytes: number) {
+  cancelledTaskIds.delete(model.id);
+  await ensureNotificationPermission();
+  await ensureModelDirectories();
+
+  const task = createDownloadTask({
+    id: model.id,
+    url: modelDownloadUrl(model),
+    destination: tempPath(model),
+    maxRedirects: 10,
+    metadata: {
+      groupId: 'model-downloads',
+      groupName: 'Model downloads',
+    },
+  });
+
+  attachHandlers(task, model);
+  await upsertModelDownloadStatus(model.id, 'downloading', fromBytes, task.id);
+  setDownload(model.id, { status: 'downloading', downloadedBytes: fromBytes });
+  task.start();
+}
+
 export async function startModelDownload(modelId: string): Promise<void> {
   await initializeModelDownloads();
 
@@ -333,6 +427,8 @@ export async function startModelDownload(modelId: string): Promise<void> {
   const current = store.downloads[modelId];
   if (!model || current?.status === 'queued' || current?.status === 'downloading') return;
   if (current?.status === 'ready') return;
+
+  await ensureNotificationPermission();
 
   if (activeDownloads.size < MAX_CONCURRENT) {
     void runDownload(model);

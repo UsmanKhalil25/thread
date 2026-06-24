@@ -1,6 +1,18 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Progress } from '@/components/ui/progress';
+import { Text } from '@/components/ui/text';
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { useDownload } from '@/features/models/hooks/use-downloads';
 import { cn } from '@/lib/utils';
@@ -20,8 +32,9 @@ function formatBytes(bytes: number): string {
 }
 
 export function DownloadableModel({ model, isLast }: DownloadableModelProps) {
-  const { status, downloadedBytes, start, cancel, remove } = useDownload(model.id);
-  const progress = Math.min(Math.round((downloadedBytes / model.sizeBytes) * 100), 100);
+  const { status, downloadedBytes, totalBytes, start, cancel, remove } = useDownload(model.id);
+  const total = totalBytes && totalBytes > 0 ? totalBytes : model.sizeBytes;
+  const progress = total > 0 ? Math.min(Math.round((downloadedBytes / total) * 100), 100) : 0;
 
   return (
     <View className={cn('gap-2.5 px-4 py-4', !isLast && 'border-border border-b')}>
@@ -36,9 +49,29 @@ export function DownloadableModel({ model, isLast }: DownloadableModelProps) {
         {status === 'ready' && (
           <View className="flex-row items-center gap-2">
             <Icon as={Check} className="text-emerald-400" size={15} strokeWidth={2.2} />
-            <Button variant="ghost" size="icon" onPress={remove} className="size-8">
-              <Icon as={Trash2} className="text-muted-foreground size-4" />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <Icon as={Trash2} className="text-muted-foreground size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete model?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes {model.name} from this device. You can download it again later.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    <Text>Cancel</Text>
+                  </AlertDialogCancel>
+                  <AlertDialogAction onPress={remove}>
+                    <Text>Delete</Text>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </View>
         )}
         {status === 'queued' && (
@@ -76,7 +109,7 @@ export function DownloadableModel({ model, isLast }: DownloadableModelProps) {
           <Progress value={progress} className="bg-border h-0.5" indicatorClassName="bg-blue-400" />
           <View className="flex-row items-center justify-between">
             <Caption>{formatBytes(downloadedBytes)}</Caption>
-            <Caption>{formatBytes(model.sizeBytes)}</Caption>
+            <Caption>{formatBytes(total)}</Caption>
           </View>
         </View>
       )}
