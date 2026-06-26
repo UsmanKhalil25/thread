@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function NewChatScreen() {
   const [greeting, subtitle] = useGreeting();
-  const { messages, isGenerating, editAndRegenerate, regenerate } = useChatSession();
+  const { messages, isGenerating, editAndRegenerate, regenerate, thinkingLabel } = useChatSession();
   const insets = useSafeAreaInsets();
   const hasMessages = messages.length > 0;
 
@@ -21,6 +21,7 @@ export default function NewChatScreen() {
           isBusy={isGenerating}
           onEdit={editAndRegenerate}
           onRegenerate={regenerate}
+          thinkingLabel={thinkingLabel}
         />
       ) : (
         <View className="flex-1 justify-center gap-8 px-6">

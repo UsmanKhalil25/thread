@@ -1,5 +1,6 @@
 import '@/global.css';
 
+import { backfillMissingTitles } from '@/db/repositories/chats.repository';
 import { markInterruptedOnStartup } from '@/db/repositories/messages.repository';
 import { useModelDownloadReconciliation } from '@/features/models/hooks/use-downloads';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
@@ -34,7 +35,10 @@ export default function RootLayout() {
   }, [activeTheme]);
 
   useEffect(() => {
-    if (isReady) void markInterruptedOnStartup();
+    if (isReady) {
+      void markInterruptedOnStartup();
+      void backfillMissingTitles();
+    }
   }, [isReady]);
 
   if (!isReady) return null;

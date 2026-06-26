@@ -54,6 +54,7 @@
         "expo-updates": "~55.0.21",
         "llama.rn": "^0.12.5",
         "lucide-react-native": "^0.545.0",
+        "marked": "18.0.3",
         "react": "19.2.0",
         "react-dom": "19.2.0",
         "react-native": "0.83.6",

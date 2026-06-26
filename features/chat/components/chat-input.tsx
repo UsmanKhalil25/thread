@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Caption } from '@/components/ui/typography';
 import { useChat } from '@/features/chat/contexts/chat-context';
-import { useChatSession } from '@/features/chat/hooks/use-chat-session';
+import { useChatActions, useIsGenerating } from '@/features/chat/hooks/use-chat-session';
 import { useLlamaStatus } from '@/features/inference/use-inference';
 import { useModelDownloads } from '@/features/models/hooks/use-downloads';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,8 @@ export function ChatInput({
 }: ChatInputProps) {
   const router = useRouter();
   const { selectedModelId, openModelPicker } = useChat();
-  const { send, stop, isGenerating } = useChatSession();
+  const { send, stop } = useChatActions();
+  const isGenerating = useIsGenerating();
   const llamaStatus = useLlamaStatus();
   const downloads = useModelDownloads();
   const [text, setText] = useState('');

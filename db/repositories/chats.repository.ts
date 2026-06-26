@@ -1,12 +1,18 @@
 import { db } from '@/db/client';
 import { chatsTable, messagesTable } from '@/db/schema';
 import type { Chat } from '@/types/entities/chat';
-import { desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 
 type ChatRow = typeof chatsTable.$inferSelect;
 
 function createId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function titleFromText(text: string): string {
+  const normalized = text.trim().replace(/\s+/g, ' ');
+  if (normalized.length <= 40) return normalized;
+  return `${normalized.slice(0, 40).trim()}...`;
 }
 
 function toChat(row: ChatRow): Chat {
@@ -51,4 +57,28 @@ export async function setChatTitle(id: string, title: string): Promise<void> {
 
 export async function setChatModel(id: string, modelId: string): Promise<void> {
   await db.update(chatsTable).set({ modelId, updatedAt: Date.now() }).where(eq(chatsTable.id, id));
+}
+
+export async function backfillMissingTitles(): Promise<void> {
+  const chats = await db
+    .select({ id: chatsTable.id })
+    .from(chatsTable)
+    .where(isNull(chatsTable.title));
+
+  for (const chat of chats) {
+    const firstUserMessage = await db
+      .select({ content: messagesTable.content })
+      .from(messagesTable)
+      .where(and(eq(messagesTable.chatId, chat.id), eq(messagesTable.role, 'user')))
+      .orderBy(asc(messagesTable.createdAt))
+      .limit(1);
+
+    const content = firstUserMessage[0]?.content.trim();
+    if (!content) continue;
+
+    await db
+      .update(chatsTable)
+      .set({ title: titleFromText(content), updatedAt: Date.now() })
+      .where(eq(chatsTable.id, chat.id));
+  }
 }

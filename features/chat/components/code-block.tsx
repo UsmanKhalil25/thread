@@ -1,7 +1,7 @@
 import { Text } from '@/components/ui/text';
 import { THEME } from '@/lib/theme';
 import * as Clipboard from 'expo-clipboard';
-import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, type ComponentType, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import CodeHighlighter, { type ReactStyle } from 'react-native-code-highlighter';
 
@@ -12,8 +12,6 @@ interface CodeBlockProps {
   isStreaming?: boolean;
 }
 
-// Syntax token colors are passed as raw values to the highlighter (which renders its
-// own internal Text nodes), so this map stays inline — it isn't a className concern.
 function hljsTheme(scheme: 'light' | 'dark'): ReactStyle {
   const theme = THEME[scheme];
   const c =
@@ -75,7 +73,7 @@ interface HighlightProps {
 
 const Highlight = CodeHighlighter as unknown as ComponentType<HighlightProps>;
 
-export function CodeBlock({
+function CodeBlockComponent({
   code,
   language = 'text',
   scheme,
@@ -152,3 +150,5 @@ export function CodeBlock({
     </View>
   );
 }
+
+export const CodeBlock = memo(CodeBlockComponent);

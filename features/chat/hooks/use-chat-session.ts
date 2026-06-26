@@ -13,6 +13,8 @@ import {
   updateMessageContent,
 } from '@/db/repositories/messages.repository';
 import { useChat } from '@/features/chat/contexts/chat-context';
+import { refreshChats } from '@/features/chat/hooks/use-chats';
+import { generateChatTitle } from '@/features/chat/lib/generate-title';
 import { buildMessages } from '@/features/chat/lib/build-prompt';
 import { llamaService } from '@/features/inference/llama-service';
 import { profileForModel } from '@/features/inference/profiles';
@@ -25,6 +27,7 @@ interface ChatSessionSnapshot {
   chatId: string | null;
   messages: Message[];
   isGenerating: boolean;
+  titlePhase: boolean;
 }
 
 interface ActiveGeneration {
@@ -34,12 +37,24 @@ interface ActiveGeneration {
   frame: number | null;
 }
 
-const EMPTY_SNAPSHOT: ChatSessionSnapshot = { chatId: null, messages: [], isGenerating: false };
+interface PendingTitleTurn {
+  assistantId: string;
+  fallbackTitle: string;
+  stopped: boolean;
+}
+
+const EMPTY_SNAPSHOT: ChatSessionSnapshot = {
+  chatId: null,
+  messages: [],
+  isGenerating: false,
+  titlePhase: false,
+};
 const listeners = new Set<() => void>();
 
 let snapshot = EMPTY_SNAPSHOT;
 let loadingChatId: string | null = null;
 let activeGeneration: ActiveGeneration | null = null;
+let pendingTitleTurn: PendingTitleTurn | null = null;
 
 function emit() {
   for (const listener of listeners) listener();
@@ -77,7 +92,7 @@ async function loadChatMessages(chatId: string | null) {
   loadingChatId = chatId;
 
   if (!chatId) {
-    setSnapshot({ chatId: null, messages: [], isGenerating: false });
+    setSnapshot({ chatId: null, messages: [], isGenerating: false, titlePhase: false });
     return;
   }
 
@@ -87,39 +102,47 @@ async function loadChatMessages(chatId: string | null) {
     chatId,
     messages,
     isGenerating:
-      activeGeneration !== null || messages.some((message) => message.status === 'generating'),
+      activeGeneration !== null ||
+      pendingTitleTurn !== null ||
+      messages.some((message) => message.status === 'generating'),
+    titlePhase: false,
   });
 }
 
 async function interruptActiveGeneration() {
   const generation = activeGeneration;
-  if (!generation) return;
+  if (generation) {
+    generation.stopped = true;
+    if (generation.frame !== null) {
+      cancelAnimationFrame(generation.frame);
+      generation.frame = null;
+    }
 
-  generation.stopped = true;
-  if (generation.frame !== null) {
-    cancelAnimationFrame(generation.frame);
-    generation.frame = null;
+    await llamaService.stop();
+    await finalizeMessage(generation.assistantId, {
+      content: generation.content,
+      status: 'interrupted',
+    });
+    patchMessage(generation.assistantId, {
+      content: generation.content,
+      status: 'interrupted',
+    });
+    activeGeneration = null;
+    setSnapshot({ isGenerating: false, titlePhase: false });
+    return;
   }
 
+  if (!pendingTitleTurn) return;
+
+  pendingTitleTurn.stopped = true;
   await llamaService.stop();
-  await finalizeMessage(generation.assistantId, {
-    content: generation.content,
-    status: 'interrupted',
-  });
-  patchMessage(generation.assistantId, {
-    content: generation.content,
-    status: 'interrupted',
-  });
-  activeGeneration = null;
-  setSnapshot({ isGenerating: false });
 }
 
-async function runAssistantTurn(params: {
+async function beginAssistantTurn(params: {
   chatId: string;
   modelId: string;
   history: Message[];
-  nCtx: number;
-}): Promise<void> {
+}): Promise<string> {
   const assistantMessage = await insertMessage({
     chatId: params.chatId,
     role: 'assistant',
@@ -131,10 +154,23 @@ async function runAssistantTurn(params: {
     chatId: params.chatId,
     messages: [...params.history, assistantMessage],
     isGenerating: true,
+    titlePhase: false,
   });
 
+  return assistantMessage.id;
+}
+
+async function streamAssistant(params: {
+  assistantId: string;
+  chatId: string;
+  modelId: string;
+  history: Message[];
+  nCtx: number;
+}): Promise<void> {
+  setSnapshot({ isGenerating: true, titlePhase: false });
+
   const generation: ActiveGeneration = {
-    assistantId: assistantMessage.id,
+    assistantId: params.assistantId,
     content: '',
     stopped: false,
     frame: null,
@@ -172,39 +208,35 @@ async function runAssistantTurn(params: {
           tokenCount: result.tokens_predicted,
         };
 
-    await finalizeMessage(assistantMessage.id, {
+    await finalizeMessage(params.assistantId, {
       content: finalContent,
       status,
       ...stats,
     });
     await touchChat(params.chatId);
     await setChatModel(params.chatId, params.modelId);
-    patchMessage(assistantMessage.id, {
+    patchMessage(params.assistantId, {
       content: finalContent,
       status,
       ...stats,
     });
+    void refreshChats();
   } catch {
     const status = generation.stopped ? 'interrupted' : 'error';
-    await finalizeMessage(assistantMessage.id, {
+    await finalizeMessage(params.assistantId, {
       content: generation.content,
       status,
     });
-    patchMessage(assistantMessage.id, { content: generation.content, status });
+    patchMessage(params.assistantId, { content: generation.content, status });
   } finally {
-    if (activeGeneration?.assistantId === assistantMessage.id) activeGeneration = null;
-    setSnapshot({ isGenerating: false });
+    if (activeGeneration?.assistantId === params.assistantId) activeGeneration = null;
+    setSnapshot({ isGenerating: false, titlePhase: false });
   }
 }
 
-export function useChatSession() {
+export function useChatActions() {
   const { activeChatId, setActiveChatId, selectedModelId } = useChat();
   const llamaStatus = useLlamaStatus();
-  const session = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-
-  useEffect(() => {
-    void loadChatMessages(activeChatId);
-  }, [activeChatId]);
 
   const send = useCallback(
     async (text: string) => {
@@ -212,7 +244,7 @@ export function useChatSession() {
       if (
         !content ||
         activeGeneration !== null ||
-        session.isGenerating ||
+        snapshot.isGenerating ||
         llamaStatus.status !== 'ready' ||
         !selectedModelId
       ) {
@@ -249,16 +281,50 @@ export function useChatSession() {
         chatId: chat.id,
         messages: history,
         isGenerating: true,
+        titlePhase: false,
       });
-      await runAssistantTurn({
+
+      if (!activeChatId) void refreshChats();
+
+      const assistantId = await beginAssistantTurn({
+        chatId: chat.id,
+        modelId: selectedModelId,
+        history,
+      });
+
+      if (!chat.title) {
+        const fallbackTitle = titleFromText(content);
+        pendingTitleTurn = {
+          assistantId,
+          fallbackTitle,
+          stopped: false,
+        };
+        setSnapshot({ titlePhase: true });
+        const title = await generateChatTitle(content, fallbackTitle);
+        const stopped = pendingTitleTurn?.assistantId === assistantId && pendingTitleTurn.stopped;
+
+        await setChatTitle(chat.id, stopped ? fallbackTitle : title);
+        pendingTitleTurn = null;
+        setSnapshot({ titlePhase: false });
+        void refreshChats();
+
+        if (stopped) {
+          await finalizeMessage(assistantId, { content: '', status: 'interrupted' });
+          patchMessage(assistantId, { content: '', status: 'interrupted' });
+          setSnapshot({ isGenerating: false, titlePhase: false });
+          return;
+        }
+      }
+
+      await streamAssistant({
+        assistantId,
         chatId: chat.id,
         modelId: selectedModelId,
         history,
         nCtx: profileForModel(model).n_ctx ?? 2048,
       });
-      if (!chat.title) await setChatTitle(chat.id, titleFromText(content));
     },
-    [activeChatId, llamaStatus.status, selectedModelId, session.isGenerating, setActiveChatId]
+    [activeChatId, llamaStatus.status, selectedModelId, setActiveChatId]
   );
 
   const editAndRegenerate = useCallback(
@@ -269,7 +335,7 @@ export function useChatSession() {
         !content ||
         !chatId ||
         activeGeneration !== null ||
-        session.isGenerating ||
+        snapshot.isGenerating ||
         llamaStatus.status !== 'ready' ||
         !selectedModelId
       ) {
@@ -288,16 +354,22 @@ export function useChatSession() {
 
       await updateMessageContent(messageId, content);
       await deleteMessages(removed.map((message) => message.id));
-      setSnapshot({ messages: history, isGenerating: true });
+      setSnapshot({ messages: history, isGenerating: true, titlePhase: false });
 
-      await runAssistantTurn({
+      const assistantId = await beginAssistantTurn({
+        chatId,
+        modelId: selectedModelId,
+        history,
+      });
+      await streamAssistant({
+        assistantId,
         chatId,
         modelId: selectedModelId,
         history,
         nCtx: profileForModel(model).n_ctx ?? 2048,
       });
     },
-    [llamaStatus.status, selectedModelId, session.isGenerating]
+    [llamaStatus.status, selectedModelId]
   );
 
   const regenerate = useCallback(
@@ -306,7 +378,7 @@ export function useChatSession() {
       if (
         !chatId ||
         activeGeneration !== null ||
-        session.isGenerating ||
+        snapshot.isGenerating ||
         llamaStatus.status !== 'ready' ||
         !selectedModelId
       ) {
@@ -324,16 +396,22 @@ export function useChatSession() {
 
       const removed = snapshot.messages.slice(idx);
       await deleteMessages(removed.map((message) => message.id));
-      setSnapshot({ messages: history, isGenerating: true });
+      setSnapshot({ messages: history, isGenerating: true, titlePhase: false });
 
-      await runAssistantTurn({
+      const assistantId = await beginAssistantTurn({
+        chatId,
+        modelId: selectedModelId,
+        history,
+      });
+      await streamAssistant({
+        assistantId,
         chatId,
         modelId: selectedModelId,
         history,
         nCtx: profileForModel(model).n_ctx ?? 2048,
       });
     },
-    [llamaStatus.status, selectedModelId, session.isGenerating]
+    [llamaStatus.status, selectedModelId]
   );
 
   const stop = useCallback(async () => {
@@ -341,7 +419,34 @@ export function useChatSession() {
   }, []);
 
   return useMemo(
-    () => ({ ...session, send, stop, editAndRegenerate, regenerate }),
-    [editAndRegenerate, regenerate, send, session, stop]
+    () => ({ send, stop, editAndRegenerate, regenerate }),
+    [editAndRegenerate, regenerate, send, stop]
+  );
+}
+
+// Slice subscription: re-renders a consumer only when the boolean flips, not on
+// every streamed token. Used by ChatInput so typing/interaction stays smooth.
+export function useIsGenerating(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => snapshot.isGenerating,
+    () => snapshot.isGenerating
+  );
+}
+
+export function useChatSession() {
+  const { activeChatId } = useChat();
+  const session = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const actions = useChatActions();
+
+  useEffect(() => {
+    void loadChatMessages(activeChatId);
+  }, [activeChatId]);
+
+  const thinkingLabel = session.titlePhase ? 'Generating title for chat' : 'Thinking';
+
+  return useMemo(
+    () => ({ ...session, ...actions, thinkingLabel }),
+    [actions, session, thinkingLabel]
   );
 }

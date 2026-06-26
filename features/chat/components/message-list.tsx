@@ -1,29 +1,44 @@
 import { MessageBubble } from '@/features/chat/components/message-bubble';
 import type { Message } from '@/types/entities/message';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 interface MessageListProps {
   messages: Message[];
   onEdit?: (id: string, content: string) => void | Promise<void>;
   onRegenerate?: (id: string) => void | Promise<void>;
   isBusy?: boolean;
+  thinkingLabel?: string;
 }
 
-export function MessageList({ messages, onEdit, onRegenerate, isBusy }: MessageListProps) {
+export function MessageList({
+  messages,
+  onEdit,
+  onRegenerate,
+  isBusy,
+  thinkingLabel,
+}: MessageListProps) {
   const renderItem = useCallback(
     ({ item }: { item: Message }) => (
-      <MessageBubble message={item} onEdit={onEdit} onRegenerate={onRegenerate} isBusy={isBusy} />
+      <MessageBubble
+        message={item}
+        onEdit={onEdit}
+        onRegenerate={onRegenerate}
+        isBusy={isBusy}
+        thinkingLabel={thinkingLabel}
+      />
     ),
-    [isBusy, onEdit, onRegenerate]
+    [isBusy, onEdit, onRegenerate, thinkingLabel]
   );
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
+  const extraData = useMemo(() => ({ isBusy, thinkingLabel }), [isBusy, thinkingLabel]);
+
   return (
     <FlashList
       data={messages}
-      extraData={isBusy}
+      extraData={extraData}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       style={{ flex: 1 }}

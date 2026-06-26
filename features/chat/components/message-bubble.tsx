@@ -1,11 +1,11 @@
 import { Text } from '@/components/ui/text';
 import { Caption } from '@/components/ui/typography';
+import { BeamingText } from '@/features/chat/components/beaming-text';
 import { MessageActions } from '@/features/chat/components/message-actions';
 import { MessageEditor } from '@/features/chat/components/message-editor';
 import { MarkdownMessage } from '@/features/chat/components/markdown-message';
-import { ThinkingIndicator } from '@/features/chat/components/thinking-indicator';
 import type { Message } from '@/types/entities/message';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { View } from 'react-native';
 
 interface MessageBubbleProps {
@@ -13,9 +13,16 @@ interface MessageBubbleProps {
   onEdit?: (id: string, content: string) => void | Promise<void>;
   onRegenerate?: (id: string) => void | Promise<void>;
   isBusy?: boolean;
+  thinkingLabel?: string;
 }
 
-export function MessageBubble({ message, onEdit, onRegenerate, isBusy }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({
+  message,
+  onEdit,
+  onRegenerate,
+  isBusy,
+  thinkingLabel,
+}: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isThinking = message.status === 'generating' && !message.content;
   const showStats =
@@ -58,7 +65,7 @@ export function MessageBubble({ message, onEdit, onRegenerate, isBusy }: Message
   return (
     <View className="w-full gap-1 px-4 py-2">
       {isThinking ? (
-        <ThinkingIndicator />
+        <BeamingText label={thinkingLabel} />
       ) : (
         <MarkdownMessage content={message.content} isStreaming={message.status === 'generating'} />
       )}
@@ -76,4 +83,4 @@ export function MessageBubble({ message, onEdit, onRegenerate, isBusy }: Message
       ) : null}
     </View>
   );
-}
+});

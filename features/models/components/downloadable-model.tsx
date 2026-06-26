@@ -61,7 +61,7 @@ export function DownloadableModel({ model, isLast }: DownloadableModelProps) {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="size-8">
-                  <Icon as={Trash2} className="text-muted-foreground size-4" />
+                  <Icon as={Trash2} className="text-destructive size-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

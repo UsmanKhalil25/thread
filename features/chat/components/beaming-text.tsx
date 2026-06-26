@@ -10,12 +10,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-interface ThinkingIndicatorProps {
+interface BeamingTextProps {
   label?: string;
   className?: string;
 }
 
-export function ThinkingIndicator({ label = 'Thinking', className }: ThinkingIndicatorProps) {
+export function BeamingText({ label = 'Thinking', className }: BeamingTextProps) {
   const progress = useSharedValue(0.4);
 
   useEffect(() => {
