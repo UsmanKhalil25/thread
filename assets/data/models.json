@@ -16,6 +16,22 @@
     "description": "Fastest. Good for simple tasks on any device."
   },
   {
+    "id": "gemma-3-1b",
+    "name": "Gemma 3 1B",
+    "initial": "G",
+    "tint": "#34d399",
+    "params": "1B",
+    "quant": "Q4_K_M",
+    "sizeBytes": 806000000,
+    "sizeLabel": "0.8 GB",
+    "ramLabel": "1.5 GB",
+    "deviceTier": "any",
+    "hfRepo": "ggml-org/gemma-3-1b-it-GGUF",
+    "filename": "gemma-3-1b-it-Q4_K_M.gguf",
+    "family": "gemma",
+    "description": "Google's newest compact model. Fast and capable on any device."
+  },
+  {
     "id": "smollm2-1.7b",
     "name": "SmolLM2 1.7B",
     "initial": "S",
@@ -46,6 +62,22 @@
     "filename": "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
     "family": "qwen",
     "description": "Best multilingual model at this size."
+  },
+  {
+    "id": "qwen3-1.7b",
+    "name": "Qwen3 1.7B",
+    "initial": "Q",
+    "tint": "#a78bfa",
+    "params": "1.7B",
+    "quant": "Q4_K_M",
+    "sizeBytes": 1280000000,
+    "sizeLabel": "1.3 GB",
+    "ramLabel": "2.0 GB",
+    "deviceTier": "any",
+    "hfRepo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+    "filename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+    "family": "qwen",
+    "description": "Newest Qwen with optional reasoning. Strong multilingual."
   },
   {
     "id": "gemma-2-2b",
@@ -93,6 +125,7 @@
     "hfRepo": "bartowski/Qwen2.5-3B-Instruct-GGUF",
     "filename": "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
     "family": "qwen",
+    "categories": ["code"],
     "description": "Strong at code and multilingual tasks."
   },
   {

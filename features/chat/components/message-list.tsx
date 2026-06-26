@@ -1,3 +1,4 @@
+import { ListSpinner } from '@/components/ui/list-spinner';
 import { MessageBubble } from '@/features/chat/components/message-bubble';
 import type { Message } from '@/types/entities/message';
 import { FlashList } from '@shopify/flash-list';
@@ -9,6 +10,8 @@ interface MessageListProps {
   onRegenerate?: (id: string) => void | Promise<void>;
   isBusy?: boolean;
   thinkingLabel?: string;
+  onLoadOlder?: () => void;
+  loadingOlder?: boolean;
 }
 
 export function MessageList({
@@ -17,6 +20,8 @@ export function MessageList({
   onRegenerate,
   isBusy,
   thinkingLabel,
+  onLoadOlder,
+  loadingOlder,
 }: MessageListProps) {
   const renderItem = useCallback(
     ({ item }: { item: Message }) => (
@@ -44,6 +49,13 @@ export function MessageList({
       style={{ flex: 1 }}
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 16 }}
       showsVerticalScrollIndicator={false}
+      onStartReached={onLoadOlder}
+      onStartReachedThreshold={0.5}
+      ListHeaderComponent={loadingOlder ? <ListSpinner /> : null}
+      maintainVisibleContentPosition={{
+        startRenderingFromBottom: true,
+        autoscrollToBottomThreshold: 0.2,
+      }}
     />
   );
 }

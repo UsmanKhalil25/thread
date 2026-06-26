@@ -1,9 +1,11 @@
 import { db } from '@/db/client';
+import type { Cursor } from '@/db/repositories/pagination';
 import { messagesTable } from '@/db/schema';
 import type { Message, MessageRole, MessageStatus } from '@/types/entities/message';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lt, or } from 'drizzle-orm';
 
 type MessageRow = typeof messagesTable.$inferSelect;
+const MESSAGES_PAGE = 30;
 
 interface InsertMessageParams {
   id?: string;
@@ -45,8 +47,34 @@ export async function listMessages(chatId: string): Promise<Message[]> {
     .select()
     .from(messagesTable)
     .where(eq(messagesTable.chatId, chatId))
-    .orderBy(asc(messagesTable.createdAt));
+    .orderBy(asc(messagesTable.createdAt), asc(messagesTable.id));
   return rows.map(toMessage);
+}
+
+export async function listMessagesPage(
+  chatId: string,
+  opts?: { limit?: number; before?: Cursor | null }
+): Promise<{ items: Message[]; hasOlder: boolean }> {
+  const limit = opts?.limit ?? MESSAGES_PAGE;
+  const before = opts?.before ?? null;
+  const where = before
+    ? and(
+        eq(messagesTable.chatId, chatId),
+        or(
+          lt(messagesTable.createdAt, before.ts),
+          and(eq(messagesTable.createdAt, before.ts), lt(messagesTable.id, before.id))
+        )
+      )
+    : eq(messagesTable.chatId, chatId);
+
+  const rows = await db
+    .select()
+    .from(messagesTable)
+    .where(where)
+    .orderBy(desc(messagesTable.createdAt), desc(messagesTable.id))
+    .limit(limit + 1);
+
+  return { items: rows.slice(0, limit).map(toMessage).reverse(), hasOlder: rows.length > limit };
 }
 
 export async function insertMessage(params: InsertMessageParams): Promise<Message> {

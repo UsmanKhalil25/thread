@@ -18,5 +18,5 @@ export const messagesTable = sqliteTable(
     tokenCount: integer('token_count'),
     createdAt: integer('created_at').notNull(),
   },
-  (t) => [index('messages_chat_idx').on(t.chatId, t.createdAt)]
+  (t) => [index('messages_chat_idx').on(t.chatId, t.createdAt, t.id)]
 );

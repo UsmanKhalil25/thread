@@ -1,11 +1,22 @@
+import { getChat, setChatModel } from '@/db/repositories/chats.repository';
 import { getReadyModelPath } from '@/db/repositories/model-downloads.repository';
+import { refreshChats } from '@/features/chat/hooks/use-chats';
 import { llamaService } from '@/features/inference/llama-service';
 import { MODEL_CATALOG } from '@/lib/models';
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+} from 'react';
 
 interface ChatContextValue {
   selectedModelId: string | null;
   setSelectedModelId: (id: string | null) => void;
+  selectModel: (id: string) => void;
+  retryLoad: () => void;
   activeChatId: string | null;
   setActiveChatId: (id: string | null) => void;
   openModelPicker?: () => void;
@@ -14,6 +25,8 @@ interface ChatContextValue {
 const ChatContext = createContext<ChatContextValue>({
   selectedModelId: null,
   setSelectedModelId: () => {},
+  selectModel: () => {},
+  retryLoad: () => {},
   activeChatId: null,
   setActiveChatId: () => {},
 });
@@ -25,6 +38,37 @@ interface ChatProviderProps extends PropsWithChildren {
 export function ChatProvider({ children, openModelPicker }: ChatProviderProps) {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [loadNonce, setLoadNonce] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeChatId || llamaService.getStatus().status === 'generating') return;
+
+    void (async () => {
+      const chat = await getChat(activeChatId);
+      if (cancelled || !chat?.modelId) return;
+      setSelectedModelId(chat.modelId);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeChatId]);
+
+  const selectModel = useCallback(
+    (modelId: string) => {
+      if (llamaService.getStatus().status === 'generating') return;
+
+      setSelectedModelId(modelId);
+      if (activeChatId) {
+        void setChatModel(activeChatId, modelId);
+        void refreshChats();
+      }
+    },
+    [activeChatId]
+  );
+
+  const retryLoad = useCallback(() => setLoadNonce((value) => value + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,13 +94,15 @@ export function ChatProvider({ children, openModelPicker }: ChatProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [selectedModelId]);
+  }, [loadNonce, selectedModelId]);
 
   return (
     <ChatContext.Provider
       value={{
         selectedModelId,
         setSelectedModelId,
+        selectModel,
+        retryLoad,
         activeChatId,
         setActiveChatId,
         openModelPicker,

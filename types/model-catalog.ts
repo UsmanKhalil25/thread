@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const DeviceTierSchema = z.enum(['any', '6gb', '8gb']);
+export const ModelCategorySchema = z.enum(['code']);
 
 export const CatalogModelSchema = z.object({
   id: z.string(),
@@ -16,10 +17,12 @@ export const CatalogModelSchema = z.object({
   hfRepo: z.string(),
   filename: z.string().endsWith('.gguf'),
   family: z.string(),
+  categories: z.array(ModelCategorySchema).default([]),
   description: z.string(),
 });
 
 export const CatalogModelsSchema = z.array(CatalogModelSchema);
 
 export type DeviceTier = z.infer<typeof DeviceTierSchema>;
+export type ModelCategory = z.infer<typeof ModelCategorySchema>;
 export type CatalogModel = z.infer<typeof CatalogModelSchema>;

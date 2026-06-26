@@ -3,12 +3,27 @@ import { Icon } from '@/components/ui/icon';
 import { ChatHistoryDrawer } from '@/features/chat/components/chat-history-drawer';
 import { ChatHeader } from '@/features/chat/components/chat-header';
 import { ModelPickerDrawer } from '@/features/chat/components/model-picker-drawer';
-import { ChatProvider } from '@/features/chat/contexts/chat-context';
+import { ChatProvider, useChat } from '@/features/chat/contexts/chat-context';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
-import { Menu } from 'lucide-react-native';
+import { Menu, Plus } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Keyboard, View } from 'react-native';
+
+function NewChatButton({ onPress }: { onPress?: () => void }) {
+  const { setActiveChatId } = useChat();
+
+  const handlePress = useCallback(() => {
+    setActiveChatId(null);
+    onPress?.();
+  }, [onPress, setActiveChatId]);
+
+  return (
+    <Button variant="ghost" size="icon" onPress={handlePress}>
+      <Icon as={Plus} className="text-foreground size-6" />
+    </Button>
+  );
+}
 
 export default function ChatLayout() {
   const router = useRouter();
@@ -18,7 +33,10 @@ export default function ChatLayout() {
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
-  const openModelPicker = useCallback(() => setModelPickerOpen(true), []);
+  const openModelPicker = useCallback(() => {
+    Keyboard.dismiss();
+    setModelPickerOpen(true);
+  }, []);
   const closeModelPicker = useCallback(() => setModelPickerOpen(false), []);
 
   const navigateToSettings = useCallback(() => {
@@ -45,16 +63,19 @@ export default function ChatLayout() {
     [openDrawer]
   );
 
+  const headerRight = useCallback(() => <NewChatButton onPress={closeDrawer} />, [closeDrawer]);
+
   const screenOptions = useMemo(
     () => ({
       headerTitle,
       headerTitleAlign: 'center' as const,
       headerLeft,
+      headerRight,
       headerStyle: { backgroundColor: colors.background },
       headerShadowVisible: false,
       animation: 'ios_from_right' as const,
     }),
-    [colors.background, headerLeft, headerTitle]
+    [colors.background, headerLeft, headerRight, headerTitle]
   );
 
   return (

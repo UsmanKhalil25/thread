@@ -1,9 +1,11 @@
 import { db } from '@/db/client';
+import type { Cursor } from '@/db/repositories/pagination';
 import { chatsTable, messagesTable } from '@/db/schema';
 import type { Chat } from '@/types/entities/chat';
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, lt, or } from 'drizzle-orm';
 
 type ChatRow = typeof chatsTable.$inferSelect;
+const CHATS_PAGE = 40;
 
 function createId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -33,8 +35,34 @@ export async function createChat(): Promise<Chat> {
 }
 
 export async function listChats(): Promise<Chat[]> {
-  const rows = await db.select().from(chatsTable).orderBy(desc(chatsTable.updatedAt));
+  const rows = await db
+    .select()
+    .from(chatsTable)
+    .orderBy(desc(chatsTable.updatedAt), desc(chatsTable.id));
   return rows.map(toChat);
+}
+
+export async function listChatsPage(opts?: {
+  limit?: number;
+  cursor?: Cursor | null;
+}): Promise<{ items: Chat[]; hasMore: boolean }> {
+  const limit = opts?.limit ?? CHATS_PAGE;
+  const cursor = opts?.cursor ?? null;
+  const where = cursor
+    ? or(
+        lt(chatsTable.updatedAt, cursor.ts),
+        and(eq(chatsTable.updatedAt, cursor.ts), lt(chatsTable.id, cursor.id))
+      )
+    : undefined;
+
+  const rows = await db
+    .select()
+    .from(chatsTable)
+    .where(where)
+    .orderBy(desc(chatsTable.updatedAt), desc(chatsTable.id))
+    .limit(limit + 1);
+
+  return { items: rows.slice(0, limit).map(toChat), hasMore: rows.length > limit };
 }
 
 export async function getChat(id: string): Promise<Chat | null> {
@@ -45,6 +73,11 @@ export async function getChat(id: string): Promise<Chat | null> {
 export async function deleteChat(id: string): Promise<void> {
   await db.delete(messagesTable).where(eq(messagesTable.chatId, id));
   await db.delete(chatsTable).where(eq(chatsTable.id, id));
+}
+
+export async function deleteAllChats(): Promise<void> {
+  await db.delete(messagesTable);
+  await db.delete(chatsTable);
 }
 
 export async function touchChat(id: string): Promise<void> {

@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { useChat } from '@/features/chat/contexts/chat-context';
+import { useIsGenerating } from '@/features/chat/hooks/use-chat-session';
 import { useModelDownloads } from '@/features/models/hooks/use-downloads';
 import { MODEL_CATALOG, type CatalogModel } from '@/lib/models';
 import { ChevronRight, Database } from 'lucide-react-native';
@@ -18,7 +19,8 @@ interface ModelPickerDrawerProps {
 }
 
 export function ModelPickerDrawer({ open, onClose, onBrowseModels }: ModelPickerDrawerProps) {
-  const { selectedModelId, setSelectedModelId } = useChat();
+  const { selectedModelId, selectModel } = useChat();
+  const isGenerating = useIsGenerating();
   const downloads = useModelDownloads();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -64,7 +66,11 @@ export function ModelPickerDrawer({ open, onClose, onBrowseModels }: ModelPicker
                   key={model.id}
                   model={model}
                   selected={selectedModelId === model.id}
-                  onPress={() => setSelectedModelId(model.id)}
+                  disabled={isGenerating}
+                  onPress={() => {
+                    selectModel(model.id);
+                    onClose();
+                  }}
                 />
               ))}
             </ScrollView>

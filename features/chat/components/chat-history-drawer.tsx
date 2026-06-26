@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { ListSpinner } from '@/components/ui/list-spinner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SearchInput } from '@/components/ui/search-input';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -19,12 +20,12 @@ import { Text } from '@/components/ui/text';
 import { Caption, RowTitle } from '@/components/ui/typography';
 import { deleteChat, setChatTitle } from '@/db/repositories/chats.repository';
 import { useChat } from '@/features/chat/contexts/chat-context';
-import { refreshChats, useChats } from '@/features/chat/hooks/use-chats';
+import { loadMoreChats, refreshChats, useChats } from '@/features/chat/hooks/use-chats';
 import type { Chat } from '@/types/entities/chat';
 import type { TriggerRef as PopoverTriggerRef } from '@rn-primitives/popover';
 import { FlashList } from '@shopify/flash-list';
-import { ChevronRight, Pencil, Plus, Settings, Trash2, X } from 'lucide-react-native';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { ChevronRight, Pencil, Settings, Trash2, X } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,7 +42,6 @@ const EDGES = ['top', 'bottom'] as const;
 interface ChatHistoryDrawerProps {
   open: boolean;
   onClose: () => void;
-  onNewChat?: () => void;
   onSelectChat?: (id: string) => void;
   onSettings?: () => void;
 }
@@ -50,11 +50,26 @@ function SectionHeader({ label }: { label: string }) {
   return <Caption className="px-1.5 pt-3 pb-1 uppercase">{label}</Caption>;
 }
 
+function ChatListSkeleton() {
+  return (
+    <View className="gap-2 pt-3">
+      <Skeleton className="bg-sidebar-accent mx-1.5 mb-1 h-3 w-16" />
+      {Array.from({ length: 7 }).map((_, i) => (
+        <View key={i} className="flex-row items-center justify-between px-3 py-3">
+          <Skeleton className={`bg-sidebar-accent ${i % 2 === 0 ? 'h-4 w-36' : 'h-4 w-48'}`} />
+          <Skeleton className="bg-sidebar-accent ml-2 h-3 w-12" />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function formatTime(updatedAt: number): string {
   const date = new Date(updatedAt);
   const now = new Date();
   const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) return 'Today';
+  if (sameDay)
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -110,7 +125,7 @@ function ChatRow({
               chat.active ? 'border-border bg-card' : 'border-transparent'
             }`}>
             {chat.title == null ? (
-              <Skeleton className="w-32 flex-1" />
+              <Skeleton className="bg-sidebar-accent w-32 flex-1" />
             ) : (
               <RowTitle
                 className={`flex-1 ${chat.active ? 'text-foreground' : 'text-muted-foreground'}`}
@@ -186,13 +201,17 @@ function ChatRow({
 export function ChatHistoryDrawer({
   open,
   onClose,
-  onNewChat,
   onSelectChat,
   onSettings,
 }: ChatHistoryDrawerProps) {
   const { activeChatId, setActiveChatId } = useChat();
-  const chats = useChats();
+  const { chats, status, loadingMore } = useChats(open);
   const [query, setQuery] = useState('');
+  const [listDrawn, setListDrawn] = useState(false);
+
+  useEffect(() => {
+    setListDrawn(false);
+  }, [open]);
 
   const handleOpenChange = useCallback(
     (v: boolean) => {
@@ -200,12 +219,6 @@ export function ChatHistoryDrawer({
     },
     [onClose]
   );
-
-  const handleNewChat = useCallback(() => {
-    setActiveChatId(null);
-    onNewChat?.();
-    onClose();
-  }, [onClose, onNewChat, setActiveChatId]);
 
   const handleSelectChat = useCallback(
     (id: string) => {
@@ -279,6 +292,8 @@ export function ChatHistoryDrawer({
     (item: ListItem) => (item.type === 'header' ? `header-${item.label}` : item.chat.id),
     []
   );
+  const initialLoading = open && status !== 'ready' && data.length === 0;
+  const maskMount = !listDrawn && data.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -289,25 +304,33 @@ export function ChatHistoryDrawer({
             <Button variant="ghost" size="icon" onPress={onClose}>
               <Icon as={X} className="text-sidebar-foreground size-5" />
             </Button>
-            <View className="flex-1" />
-            <Pressable
-              onPress={handleNewChat}
-              className="border-border bg-card flex-row items-center gap-1.5 rounded-lg border px-3 py-2 active:opacity-70">
-              <Icon as={Plus} className="text-foreground" size={12} />
-              <RowTitle className="text-xs">New chat</RowTitle>
-            </Pressable>
           </SheetHeader>
 
           <SearchInput value={query} onChangeText={setQuery} />
 
           <View className="flex-1 px-3">
-            <FlashList
-              data={data}
-              renderItem={renderItem}
-              keyExtractor={keyExtractor}
-              getItemType={getItemType}
-              showsVerticalScrollIndicator={false}
-            />
+            {initialLoading ? (
+              <ChatListSkeleton />
+            ) : (
+              <>
+                <FlashList
+                  data={data}
+                  renderItem={renderItem}
+                  keyExtractor={keyExtractor}
+                  getItemType={getItemType}
+                  showsVerticalScrollIndicator={false}
+                  onLoad={() => setListDrawn(true)}
+                  onEndReached={loadMoreChats}
+                  onEndReachedThreshold={0.5}
+                  ListFooterComponent={loadingMore ? <ListSpinner /> : null}
+                />
+                {maskMount ? (
+                  <View className="bg-sidebar absolute inset-0">
+                    <ChatListSkeleton />
+                  </View>
+                ) : null}
+              </>
+            )}
           </View>
 
           <SheetFooter className="pb-4">

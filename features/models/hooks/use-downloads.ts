@@ -473,6 +473,28 @@ export async function deleteReadyModel(modelId: string): Promise<void> {
   removeDownload(modelId);
 }
 
+export async function deleteAllModelDownloads(): Promise<void> {
+  await initializeModelDownloads();
+
+  for (const task of activeDownloads.values()) {
+    cancelledTaskIds.add(task.id);
+    await task.stop().catch(() => {});
+  }
+
+  activeDownloads.clear();
+  store.queue = [];
+
+  for (const model of MODEL_CATALOG) {
+    const current = store.downloads[model.id];
+    await deleteAsync(current?.filePath ?? finalPath(model), { idempotent: true }).catch(() => {});
+    await deleteAsync(tempPath(model), { idempotent: true }).catch(() => {});
+    await deleteModelDownload(model.id);
+  }
+
+  store.downloads = {};
+  emit();
+}
+
 export function useModelDownloadReconciliation(enabled = true) {
   useEffect(() => {
     if (!enabled) return;

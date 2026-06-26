@@ -2,33 +2,32 @@ import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search-input';
 import { Caption } from '@/components/ui/typography';
 import { DownloadableModel } from '@/features/models/components/downloadable-model';
-import { MODEL_CATALOG } from '@/lib/models';
+import { useDeviceCapability } from '@/features/models/hooks/use-device-capability';
+import { MODEL_CATALOG, modelFitsDevice, modelHasCategory } from '@/lib/models';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const FILTERS = ['all', 'compatible', 'code', 'small · <2 gb'] as const;
+const FILTERS = ['all', 'compatible', 'code'] as const;
 type ModelFilter = (typeof FILTERS)[number];
-const SMALL_MODEL_BYTES = 2 * 1024 * 1024 * 1024;
-const COMPATIBLE_TIERS = new Set(['any', '6gb']);
 
 export default function ModelsScreen() {
   const [activeFilter, setActiveFilter] = useState<ModelFilter>('all');
   const [query, setQuery] = useState('');
+  const { tier } = useDeviceCapability();
   const insets = useSafeAreaInsets();
 
   const filtered = MODEL_CATALOG.filter((model) => {
+    const normalizedQuery = query.trim().toLowerCase();
     const matchesQuery =
-      query.length === 0 ||
-      model.name.toLowerCase().includes(query.toLowerCase()) ||
-      model.family.toLowerCase().includes(query.toLowerCase());
+      normalizedQuery.length === 0 ||
+      model.name.toLowerCase().includes(normalizedQuery) ||
+      model.family.toLowerCase().includes(normalizedQuery);
 
     if (!matchesQuery) return false;
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'compatible') return COMPATIBLE_TIERS.has(model.deviceTier);
-    if (activeFilter === 'small · <2 gb') return model.sizeBytes < SMALL_MODEL_BYTES;
-    if (activeFilter === 'code') return ['qwen', 'phi'].includes(model.family);
-    return true;
+    if (activeFilter === 'compatible') return modelFitsDevice(model, tier);
+    return modelHasCategory(model, activeFilter);
   });
 
   return (
@@ -59,11 +58,17 @@ export default function ModelsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
-        <View className="border-border bg-card mx-6 overflow-hidden rounded-2xl border">
-          {filtered.map((model, i) => (
-            <DownloadableModel key={model.id} model={model} isLast={i === filtered.length - 1} />
-          ))}
-        </View>
+        {filtered.length > 0 ? (
+          <View className="border-border bg-card mx-6 overflow-hidden rounded-2xl border">
+            {filtered.map((model, i) => (
+              <DownloadableModel key={model.id} model={model} isLast={i === filtered.length - 1} />
+            ))}
+          </View>
+        ) : (
+          <View className="items-center px-6 py-12">
+            <Caption>No models found</Caption>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

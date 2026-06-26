@@ -1,7 +1,7 @@
 import { llamaService } from '@/features/inference/llama-service';
 
 const SYSTEM =
-  'You generate a concise chat title. Reply with ONLY a 3-6 word title in Title Case, no quotes and no trailing punctuation.';
+  'Generate a short, specific title for this chat from the user message. Reply with ONLY the title: 3-6 words, no quotes, no trailing punctuation. Preserve code names, acronyms, and product names. Prefer the main task or topic. Avoid generic titles like Help Request, New Chat, or General Question.';
 
 function cleanTitle(raw: string): string {
   return raw

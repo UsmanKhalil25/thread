@@ -9,7 +9,7 @@ import {
   deleteMessages,
   finalizeMessage,
   insertMessage,
-  listMessages,
+  listMessagesPage,
   updateMessageContent,
 } from '@/db/repositories/messages.repository';
 import { useChat } from '@/features/chat/contexts/chat-context';
@@ -28,6 +28,9 @@ interface ChatSessionSnapshot {
   messages: Message[];
   isGenerating: boolean;
   titlePhase: boolean;
+  isLoadingMessages: boolean;
+  hasOlder: boolean;
+  loadingOlder: boolean;
 }
 
 interface ActiveGeneration {
@@ -48,6 +51,9 @@ const EMPTY_SNAPSHOT: ChatSessionSnapshot = {
   messages: [],
   isGenerating: false,
   titlePhase: false,
+  isLoadingMessages: false,
+  hasOlder: false,
+  loadingOlder: false,
 };
 const listeners = new Set<() => void>();
 
@@ -92,21 +98,76 @@ async function loadChatMessages(chatId: string | null) {
   loadingChatId = chatId;
 
   if (!chatId) {
-    setSnapshot({ chatId: null, messages: [], isGenerating: false, titlePhase: false });
+    setSnapshot({
+      chatId: null,
+      messages: [],
+      isGenerating: false,
+      titlePhase: false,
+      isLoadingMessages: false,
+      hasOlder: false,
+      loadingOlder: false,
+    });
     return;
   }
 
-  const messages = await listMessages(chatId);
+  setSnapshot({
+    chatId,
+    messages: [],
+    isGenerating: activeGeneration !== null || pendingTitleTurn !== null,
+    titlePhase: false,
+    isLoadingMessages: true,
+    hasOlder: false,
+    loadingOlder: false,
+  });
+
+  const page = await listMessagesPage(chatId);
   if (loadingChatId !== chatId) return;
   setSnapshot({
     chatId,
-    messages,
+    messages: page.items,
     isGenerating:
       activeGeneration !== null ||
       pendingTitleTurn !== null ||
-      messages.some((message) => message.status === 'generating'),
+      page.items.some((message) => message.status === 'generating'),
     titlePhase: false,
+    isLoadingMessages: false,
+    hasOlder: page.hasOlder,
+    loadingOlder: false,
   });
+}
+
+async function loadOlderMessages() {
+  const base = snapshot;
+  if (
+    !base.hasOlder ||
+    base.loadingOlder ||
+    !base.chatId ||
+    base.messages.length === 0 ||
+    base.isLoadingMessages
+  ) {
+    return;
+  }
+
+  const chatId = base.chatId;
+  const first = base.messages[0];
+  setSnapshot({ loadingOlder: true });
+
+  try {
+    const page = await listMessagesPage(chatId, {
+      before: { ts: first.createdAt, id: first.id },
+    });
+    if (loadingChatId !== chatId || snapshot.chatId !== chatId) return;
+
+    const existing = new Set(snapshot.messages.map((message) => message.id));
+    const older = page.items.filter((message) => !existing.has(message.id));
+    setSnapshot({
+      messages: [...older, ...snapshot.messages],
+      hasOlder: page.hasOlder,
+      loadingOlder: false,
+    });
+  } catch {
+    if (snapshot.chatId === chatId) setSnapshot({ loadingOlder: false });
+  }
 }
 
 async function interruptActiveGeneration() {
@@ -155,6 +216,7 @@ async function beginAssistantTurn(params: {
     messages: [...params.history, assistantMessage],
     isGenerating: true,
     titlePhase: false,
+    isLoadingMessages: false,
   });
 
   return assistantMessage.id;
@@ -245,6 +307,7 @@ export function useChatActions() {
         !content ||
         activeGeneration !== null ||
         snapshot.isGenerating ||
+        snapshot.isLoadingMessages ||
         llamaStatus.status !== 'ready' ||
         !selectedModelId
       ) {
@@ -259,12 +322,19 @@ export function useChatActions() {
 
       if (!activeChatId) setActiveChatId(chat.id);
 
-      const baseMessages =
-        snapshot.chatId === chat.id
-          ? snapshot.messages
-          : activeChatId
-            ? await listMessages(chat.id)
-            : [];
+      let baseMessages: Message[];
+      let hasOlder: boolean;
+      if (snapshot.chatId === chat.id) {
+        baseMessages = snapshot.messages;
+        hasOlder = snapshot.hasOlder;
+      } else if (activeChatId) {
+        const page = await listMessagesPage(chat.id);
+        baseMessages = page.items;
+        hasOlder = page.hasOlder;
+      } else {
+        baseMessages = [];
+        hasOlder = false;
+      }
 
       const now = Date.now();
       const userMessage = await insertMessage({
@@ -282,6 +352,9 @@ export function useChatActions() {
         messages: history,
         isGenerating: true,
         titlePhase: false,
+        isLoadingMessages: false,
+        hasOlder,
+        loadingOlder: false,
       });
 
       if (!activeChatId) void refreshChats();
@@ -336,6 +409,7 @@ export function useChatActions() {
         !chatId ||
         activeGeneration !== null ||
         snapshot.isGenerating ||
+        snapshot.isLoadingMessages ||
         llamaStatus.status !== 'ready' ||
         !selectedModelId
       ) {
@@ -379,6 +453,7 @@ export function useChatActions() {
         !chatId ||
         activeGeneration !== null ||
         snapshot.isGenerating ||
+        snapshot.isLoadingMessages ||
         llamaStatus.status !== 'ready' ||
         !selectedModelId
       ) {
@@ -434,19 +509,28 @@ export function useIsGenerating(): boolean {
   );
 }
 
+export function useIsLoadingMessages(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => snapshot.isLoadingMessages,
+    () => snapshot.isLoadingMessages
+  );
+}
+
 export function useChatSession() {
   const { activeChatId } = useChat();
   const session = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const actions = useChatActions();
 
   useEffect(() => {
+    if (activeChatId === session.chatId) return;
     void loadChatMessages(activeChatId);
-  }, [activeChatId]);
+  }, [activeChatId, session.chatId]);
 
   const thinkingLabel = session.titlePhase ? 'Generating title for chat' : 'Thinking';
 
   return useMemo(
-    () => ({ ...session, ...actions, thinkingLabel }),
+    () => ({ ...session, ...actions, loadOlderMessages, thinkingLabel }),
     [actions, session, thinkingLabel]
   );
 }

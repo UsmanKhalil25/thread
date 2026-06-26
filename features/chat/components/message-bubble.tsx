@@ -48,9 +48,9 @@ export const MessageBubble = memo(function MessageBubble({
     }
 
     return (
-      <View className="items-end gap-1 px-4 py-2">
-        <View className="bg-primary max-w-[86%] rounded-2xl px-4 py-3">
-          <Text className="text-primary-foreground text-sm leading-relaxed">{message.content}</Text>
+      <View className="items-end gap-1.5 px-4 py-2.5">
+        <View className="bg-card border-border/70 max-w-[84%] rounded-2xl rounded-br-md border px-4 py-3 shadow-sm shadow-black/5">
+          <Text className="text-foreground text-sm leading-relaxed">{message.content}</Text>
         </View>
         <MessageActions
           content={message.content}

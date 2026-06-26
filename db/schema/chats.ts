@@ -9,5 +9,5 @@ export const chatsTable = sqliteTable(
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
-  (t) => [index('chats_updated_at_idx').on(t.updatedAt)]
+  (t) => [index('chats_updated_at_id_idx').on(t.updatedAt, t.id)]
 );

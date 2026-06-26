@@ -1,67 +1,68 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Caption } from '@/components/ui/typography';
+import { Text } from '@/components/ui/text';
 import { useChat } from '@/features/chat/contexts/chat-context';
-import { useChatActions, useIsGenerating } from '@/features/chat/hooks/use-chat-session';
+import {
+  useChatActions,
+  useIsGenerating,
+  useIsLoadingMessages,
+} from '@/features/chat/hooks/use-chat-session';
+import { useSpeechToText } from '@/features/chat/hooks/use-speech-to-text';
 import { useLlamaStatus } from '@/features/inference/use-inference';
 import { useModelDownloads } from '@/features/models/hooks/use-downloads';
 import { cn } from '@/lib/utils';
-import { ArrowUp, Mic, Paperclip, Square } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { ArrowUp, Mic, Square, TriangleAlert, X } from 'lucide-react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
-import {
-  Pressable,
-  View,
-  type TextInputContentSizeChangeEvent,
-  type TextInputProps,
-} from 'react-native';
-import { useState, useCallback, useRef } from 'react';
+import { View, type TextInputContentSizeChangeEvent, type TextInputProps } from 'react-native';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface ChatInputProps extends TextInputProps {
   onSend?: () => void;
-  onAttach?: () => void;
   onMic?: () => void;
 }
 
-export function ChatInput({
-  onSend,
-  onAttach,
-  onMic,
-  onContentSizeChange,
-  ...props
-}: ChatInputProps) {
-  const router = useRouter();
-  const { selectedModelId, openModelPicker } = useChat();
+export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: ChatInputProps) {
+  const { selectedModelId, retryLoad } = useChat();
   const { send, stop } = useChatActions();
   const isGenerating = useIsGenerating();
+  const isLoadingMessages = useIsLoadingMessages();
   const llamaStatus = useLlamaStatus();
   const downloads = useModelDownloads();
+  const speech = useSpeechToText();
   const [text, setText] = useState('');
   const [isMultiline, setIsMultiline] = useState(false);
   const singleLineHeight = useRef(0);
-  const readyModelCount = Object.values(downloads).filter(
-    (download) => download.status === 'ready'
-  ).length;
+  const speechBaseText = useRef('');
   const selectedReady = selectedModelId ? downloads[selectedModelId]?.status === 'ready' : false;
   const canSend =
     text.trim().length > 0 &&
     !isGenerating &&
+    !isLoadingMessages &&
+    !speech.isListening &&
     selectedReady &&
     llamaStatus.status === 'ready' &&
     !!selectedModelId;
 
-  const guidance = !selectedModelId
-    ? readyModelCount > 0
-      ? 'Select a model to start'
-      : 'Download a model to start'
-    : !selectedReady
-      ? 'Download this model first'
-      : llamaStatus.status === 'loading'
-        ? 'Loading model...'
-        : llamaStatus.status === 'error'
-          ? 'Model failed to load'
-          : undefined;
+  const isModelLoading =
+    !!selectedModelId && (llamaStatus.status === 'loading' || llamaStatus.status === 'unloading');
+  const placeholder = !selectedModelId
+    ? 'Select a model to start'
+    : isModelLoading
+      ? 'Loading model...'
+      : speech.isListening
+        ? 'Listening...'
+        : 'Ask anything';
+  const showModelError = !!selectedModelId && llamaStatus.status === 'error';
+
+  useEffect(() => {
+    const transcript = speech.transcript.trim();
+    if (!transcript) return;
+
+    const base = speechBaseText.current.trimEnd();
+    setText(base ? `${base} ${transcript}` : transcript);
+  }, [speech.transcript]);
 
   const handleContentSizeChange = useCallback(
     (e: TextInputContentSizeChangeEvent) => {
@@ -78,62 +79,94 @@ export function ChatInput({
     [isMultiline, onContentSizeChange]
   );
 
-  const handleGuidancePress = useCallback(() => {
-    if (!selectedModelId && readyModelCount > 0) {
-      openModelPicker?.();
-      return;
-    }
-
-    router.push('/(settings)/models');
-  }, [openModelPicker, readyModelCount, router, selectedModelId]);
-
   const handleSend = useCallback(() => {
     if (!canSend) return;
-    const content = text;
+    const content = text.trim();
     setText('');
+    speech.clear();
     onSend?.();
     void send(content);
-  }, [canSend, onSend, send, text]);
+  }, [canSend, onSend, send, speech, text]);
+
+  const handleMic = useCallback(() => {
+    onMic?.();
+    if (!speech.isListening) {
+      speechBaseText.current = text;
+    }
+    void speech.toggle();
+  }, [onMic, speech, text]);
 
   return (
     <View className="px-6 pt-2 pb-2">
-      {guidance && (
-        <Pressable onPress={handleGuidancePress} className="mb-2 items-center active:opacity-70">
-          <Caption>{guidance}</Caption>
-        </Pressable>
-      )}
+      {showModelError ? (
+        <Alert variant="destructive" icon={TriangleAlert} className="mb-2">
+          <AlertTitle>Model failed to load</AlertTitle>
+          <AlertDescription>
+            {llamaStatus.error ?? 'Select another model or try again.'}
+          </AlertDescription>
+          <Button variant="outline" size="sm" className="mt-2 ml-6 self-start" onPress={retryLoad}>
+            <Text>Try again</Text>
+          </Button>
+        </Alert>
+      ) : null}
       <View
         className={cn(
-          'border-border bg-card flex-row gap-2 rounded-2xl border px-3 py-2.5',
-          isMultiline ? 'items-end' : 'items-center'
+          'border-border bg-card gap-2 rounded-2xl border px-3 py-2.5',
+          speech.isListening && 'border-destructive/50'
         )}>
-        <Input
-          variant="ghost"
-          placeholder="Ask anything"
-          multiline
-          value={text}
-          editable={!isGenerating}
-          onChangeText={setText}
-          className="max-h-[120px]"
-          onContentSizeChange={handleContentSizeChange}
-          {...props}
-        />
-        <Animated.View layout={LinearTransition.duration(150)} className="flex-row gap-1.5">
-          <Button variant="ghost" size="icon" onPress={onAttach} className="h-8 w-8 rounded-xl">
-            <Icon as={Paperclip} className="text-muted-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" onPress={onMic} className="h-8 w-8 rounded-xl">
-            <Icon as={Mic} className="text-muted-foreground" />
-          </Button>
-          <Button
-            variant="default"
-            size="icon"
-            onPress={isGenerating ? stop : handleSend}
-            disabled={!isGenerating && !canSend}
-            className="bg-foreground h-8 w-8 rounded-xl">
-            <Icon as={isGenerating ? Square : ArrowUp} className="text-background" />
-          </Button>
-        </Animated.View>
+        {speech.isListening || speech.error ? (
+          <View className="bg-secondary flex-row items-center gap-2 rounded-xl px-3 py-2">
+            <View
+              className={cn('h-2 w-2 rounded-full', speech.error ? 'bg-destructive' : 'bg-red-500')}
+            />
+            <Text className="text-muted-foreground flex-1 font-mono text-xs">
+              {speech.error ?? 'Listening for speech...'}
+            </Text>
+            {speech.error ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onPress={speech.clear}
+                className="size-6 rounded-lg">
+                <Icon as={X} className="text-muted-foreground size-3.5" />
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
+        <View className={cn('flex-row gap-2', isMultiline ? 'items-end' : 'items-center')}>
+          <Input
+            variant="ghost"
+            placeholder={placeholder}
+            multiline
+            value={text}
+            editable={!isGenerating && !isLoadingMessages && !speech.isListening}
+            onChangeText={setText}
+            className="max-h-[120px]"
+            onContentSizeChange={handleContentSizeChange}
+            {...props}
+          />
+          <Animated.View layout={LinearTransition.duration(150)} className="flex-row gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onPress={handleMic}
+              disabled={isGenerating || isLoadingMessages}
+              className={cn('h-8 w-8 rounded-xl', speech.isListening && 'bg-destructive/10')}>
+              <Icon
+                as={speech.isListening ? Square : Mic}
+                className={speech.isListening ? 'text-destructive' : 'text-muted-foreground'}
+              />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
+              onPress={isGenerating ? stop : handleSend}
+              disabled={!isGenerating && !canSend}
+              className="bg-foreground h-8 w-8 rounded-xl">
+              <Icon as={isGenerating ? Square : ArrowUp} className="text-background" />
+            </Button>
+          </Animated.View>
+        </View>
       </View>
     </View>
   );

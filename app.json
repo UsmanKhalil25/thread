@@ -66,6 +66,14 @@
         {
           "enableOpenCLAndHexagon": false
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Thread to use the microphone for speech to text.",
+          "speechRecognitionPermission": "Allow Thread to convert speech into text.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
       ]
     ],
     "experiments": {

@@ -49,39 +49,20 @@ class LlamaService {
     if (this.modelId === model.id && this.context) return;
 
     const token = ++this.loadToken;
-    await this.releaseCurrent();
     this.setStatus('loading', null);
+    await this.disposeContext();
 
     try {
-      const ctx = await this.initContext(filePath, profileForModel(model));
-      if (token !== this.loadToken) {
-        await ctx.release().catch(() => {});
-        return;
-      }
-
-      this.context = ctx;
-      this.modelId = model.id;
-      await this.warmup();
-      if (token === this.loadToken) this.setStatus('ready');
+      await this.initAndAdopt(model, filePath, profileForModel(model), token);
     } catch {
       if (token !== this.loadToken) return;
-      await this.releaseCurrent();
       this.setStatus('loading', null);
 
       try {
-        const ctx = await this.initContext(filePath, degradedProfileForModel(model));
-        if (token !== this.loadToken) {
-          await ctx.release().catch(() => {});
-          return;
-        }
-
-        this.context = ctx;
-        this.modelId = model.id;
-        await this.warmup();
-        if (token === this.loadToken) this.setStatus('ready');
+        await this.initAndAdopt(model, filePath, degradedProfileForModel(model), token);
       } catch (error) {
         if (token === this.loadToken) {
-          await this.releaseCurrent();
+          await this.disposeContext();
           this.setStatus('error', error instanceof Error ? error.message : 'Unable to load model');
         }
         throw error;
@@ -116,37 +97,50 @@ class LlamaService {
   }
 
   async stop(): Promise<void> {
+    if (!this.generating) return;
     await this.context?.stopCompletion().catch(() => {});
   }
 
   async release(): Promise<void> {
     this.loadToken += 1;
-    await this.releaseCurrent();
+    if (this.context) this.setStatus('unloading');
+    await this.disposeContext();
+    this.error = undefined;
+    if (this.status !== 'idle') this.setStatus('idle');
   }
 
   private async initContext(filePath: string, profile: RuntimeProfile): Promise<LlamaContext> {
     return initLlama({ model: filePath, ...profile });
   }
 
-  private async warmup(): Promise<void> {
-    await this.context?.completion({ prompt: 'Hi', n_predict: 4 }, () => {});
-  }
-
-  private async releaseCurrent(): Promise<void> {
-    if (!this.context) {
-      this.modelId = null;
-      this.error = undefined;
-      if (this.status !== 'idle') this.setStatus('idle');
+  private async initAndAdopt(
+    model: CatalogModel,
+    filePath: string,
+    profile: RuntimeProfile,
+    token: number
+  ): Promise<void> {
+    const ctx = await this.initContext(filePath, profile);
+    if (token !== this.loadToken) {
+      await ctx.release().catch(() => {});
       return;
     }
 
-    this.setStatus('unloading');
+    this.context = ctx;
+    this.modelId = model.id;
+    if (token === this.loadToken) this.setStatus('ready');
+  }
+
+  private async disposeContext(): Promise<void> {
+    if (!this.context) {
+      this.modelId = null;
+      return;
+    }
+
     await this.stop();
     await this.context.release().catch(() => {});
     this.context = null;
     this.modelId = null;
     this.generating = false;
-    this.setStatus('idle');
   }
 
   private setStatus(status: LlamaStatus, error?: string | null) {
