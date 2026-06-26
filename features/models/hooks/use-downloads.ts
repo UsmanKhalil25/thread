@@ -24,7 +24,7 @@ import {
   moveAsync,
   readAsStringAsync,
 } from 'expo-file-system/legacy';
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 const MAX_CONCURRENT = 1;
@@ -491,6 +491,36 @@ export function useDownload(modelId: string) {
     () => getDownloadSnapshot(modelId)
   );
 
+  // Smoothed download speed (bytes/sec), derived from the running byte count.
+  // Sampled once per second so it reads steadily instead of jumping per event.
+  const active = download.status === 'downloading';
+  const bytesRef = useRef(download.downloadedBytes);
+  bytesRef.current = download.downloadedBytes;
+  const lastRef = useRef({ bytes: download.downloadedBytes, time: Date.now() });
+  const [speed, setSpeed] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setSpeed(0);
+      lastRef.current = { bytes: bytesRef.current, time: Date.now() };
+      return;
+    }
+
+    lastRef.current = { bytes: bytesRef.current, time: Date.now() };
+    const id = setInterval(() => {
+      const now = Date.now();
+      const elapsed = (now - lastRef.current.time) / 1000;
+      const delta = bytesRef.current - lastRef.current.bytes;
+      if (elapsed > 0) {
+        const instant = Math.max(delta / elapsed, 0);
+        setSpeed((prev) => (prev === 0 ? instant : prev * 0.6 + instant * 0.4));
+      }
+      lastRef.current = { bytes: bytesRef.current, time: now };
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [active]);
+
   const start = useCallback(() => {
     void startModelDownload(modelId);
   }, [modelId]);
@@ -503,5 +533,8 @@ export function useDownload(modelId: string) {
     void deleteReadyModel(modelId);
   }, [modelId]);
 
-  return useMemo(() => ({ ...download, start, cancel, remove }), [cancel, download, remove, start]);
+  return useMemo(
+    () => ({ ...download, speed, start, cancel, remove }),
+    [cancel, download, remove, speed, start]
+  );
 }

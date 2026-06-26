@@ -1,5 +1,6 @@
 import '@/global.css';
 
+import { markInterruptedOnStartup } from '@/db/repositories/messages.repository';
 import { useModelDownloadReconciliation } from '@/features/models/hooks/use-downloads';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { NAV_THEME, THEME } from '@/lib/theme';
@@ -31,6 +32,10 @@ export default function RootLayout() {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(THEME[activeTheme].background);
   }, [activeTheme]);
+
+  useEffect(() => {
+    if (isReady) void markInterruptedOnStartup();
+  }, [isReady]);
 
   if (!isReady) return null;
 

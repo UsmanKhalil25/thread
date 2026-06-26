@@ -3,38 +3,22 @@ import { Icon } from '@/components/ui/icon';
 import { SearchInput } from '@/components/ui/search-input';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Caption, RowTitle } from '@/components/ui/typography';
+import { deleteChat, listChats } from '@/db/repositories/chats.repository';
+import { useChat } from '@/features/chat/contexts/chat-context';
+import type { Chat } from '@/types/entities/chat';
 import { FlashList } from '@shopify/flash-list';
 import { ChevronRight, Plus, Settings, X } from 'lucide-react-native';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Chat = {
-  id: string;
-  title: string;
+type ChatRowItem = Chat & {
   time: string;
   section: 'Today' | 'Earlier';
   active?: boolean;
 };
 
-type ListItem = { type: 'header'; label: string } | { type: 'chat'; chat: Chat };
-
-const CHATS: Chat[] = [
-  { id: '1', title: 'Rust async runtime', time: 'Now', section: 'Today', active: true },
-  { id: '2', title: 'Refactor auth middleware', time: '2h', section: 'Today' },
-  { id: '3', title: 'Plan the week', time: 'Yesterday', section: 'Earlier' },
-  { id: '4', title: 'Translate Hokusai essay', time: 'Yesterday', section: 'Earlier' },
-  { id: '5', title: 'RAG over journal entries', time: 'Mon', section: 'Earlier' },
-  { id: '6', title: 'Dinner ideas with shiso', time: 'Mon', section: 'Earlier' },
-  { id: '7', title: 'Notes on Bach partitas', time: 'Sun', section: 'Earlier' },
-];
-
-const LIST_DATA: ListItem[] = [
-  { type: 'header', label: 'Today' },
-  ...CHATS.filter((c) => c.section === 'Today').map((chat) => ({ type: 'chat' as const, chat })),
-  { type: 'header', label: 'Earlier' },
-  ...CHATS.filter((c) => c.section === 'Earlier').map((chat) => ({ type: 'chat' as const, chat })),
-];
+type ListItem = { type: 'header'; label: string } | { type: 'chat'; chat: ChatRowItem };
 
 const EDGES = ['top', 'bottom'] as const;
 
@@ -50,18 +34,40 @@ function SectionHeader({ label }: { label: string }) {
   return <Caption className="px-1.5 pt-3 pb-1 uppercase">{label}</Caption>;
 }
 
-function ChatRow({ chat, onSelectChat }: { chat: Chat; onSelectChat?: (id: string) => void }) {
+function formatTime(updatedAt: number): string {
+  const date = new Date(updatedAt);
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) return 'Today';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function getSection(updatedAt: number): 'Today' | 'Earlier' {
+  return new Date(updatedAt).toDateString() === new Date().toDateString() ? 'Today' : 'Earlier';
+}
+
+function ChatRow({
+  chat,
+  onSelectChat,
+  onDeleteChat,
+}: {
+  chat: ChatRowItem;
+  onSelectChat?: (id: string) => void;
+  onDeleteChat?: (id: string) => void;
+}) {
   const handlePress = useCallback(() => onSelectChat?.(chat.id), [chat.id, onSelectChat]);
+  const handleLongPress = useCallback(() => onDeleteChat?.(chat.id), [chat.id, onDeleteChat]);
   return (
     <Pressable
       onPress={handlePress}
+      onLongPress={handleLongPress}
       className={`flex-row items-center justify-between rounded-xl border px-3 py-2.5 ${
         chat.active ? 'border-border bg-card' : 'border-transparent'
       }`}>
       <RowTitle
         className={`flex-1 ${chat.active ? 'text-foreground' : 'text-muted-foreground'}`}
         numberOfLines={1}>
-        {chat.title}
+        {chat.title ?? 'New chat'}
       </RowTitle>
       <Caption className="ml-2 shrink-0">{chat.time}</Caption>
     </Pressable>
@@ -75,6 +81,18 @@ export function ChatHistoryDrawer({
   onSelectChat,
   onSettings,
 }: ChatHistoryDrawerProps) {
+  const { activeChatId, setActiveChatId } = useChat();
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [query, setQuery] = useState('');
+
+  const reloadChats = useCallback(async () => {
+    setChats(await listChats());
+  }, []);
+
+  useEffect(() => {
+    if (open) void reloadChats();
+  }, [open, reloadChats]);
+
   const handleOpenChange = useCallback(
     (v: boolean) => {
       if (!v) onClose();
@@ -82,12 +100,67 @@ export function ChatHistoryDrawer({
     [onClose]
   );
 
+  const handleNewChat = useCallback(() => {
+    setActiveChatId(null);
+    onNewChat?.();
+    onClose();
+  }, [onClose, onNewChat, setActiveChatId]);
+
+  const handleSelectChat = useCallback(
+    (id: string) => {
+      setActiveChatId(id);
+      onSelectChat?.(id);
+      onClose();
+    },
+    [onClose, onSelectChat, setActiveChatId]
+  );
+
+  const handleDeleteChat = useCallback(
+    async (id: string) => {
+      await deleteChat(id);
+      if (activeChatId === id) setActiveChatId(null);
+      await reloadChats();
+    },
+    [activeChatId, reloadChats, setActiveChatId]
+  );
+
+  const data = useMemo<ListItem[]>(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const rows = chats
+      .filter((chat) => (chat.title ?? 'New chat').toLowerCase().includes(normalizedQuery))
+      .map((chat) => ({
+        ...chat,
+        time: formatTime(chat.updatedAt),
+        section: getSection(chat.updatedAt),
+        active: chat.id === activeChatId,
+      }));
+
+    const today = rows.filter((chat) => chat.section === 'Today');
+    const earlier = rows.filter((chat) => chat.section === 'Earlier');
+    return [
+      ...(today.length
+        ? [
+            { type: 'header' as const, label: 'Today' },
+            ...today.map((chat) => ({ type: 'chat' as const, chat })),
+          ]
+        : []),
+      ...(earlier.length
+        ? [
+            { type: 'header' as const, label: 'Earlier' },
+            ...earlier.map((chat) => ({ type: 'chat' as const, chat })),
+          ]
+        : []),
+    ];
+  }, [activeChatId, chats, query]);
+
   const renderItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.type === 'header') return <SectionHeader label={item.label} />;
-      return <ChatRow chat={item.chat} onSelectChat={onSelectChat} />;
+      return (
+        <ChatRow chat={item.chat} onSelectChat={handleSelectChat} onDeleteChat={handleDeleteChat} />
+      );
     },
-    [onSelectChat]
+    [handleDeleteChat, handleSelectChat]
   );
 
   const getItemType = useCallback((item: ListItem) => item.type, []);
@@ -107,18 +180,18 @@ export function ChatHistoryDrawer({
             </Button>
             <View className="flex-1" />
             <Pressable
-              onPress={onNewChat}
+              onPress={handleNewChat}
               className="border-border bg-card flex-row items-center gap-1.5 rounded-lg border px-3 py-2 active:opacity-70">
               <Icon as={Plus} className="text-foreground" size={12} />
               <RowTitle className="text-xs">New chat</RowTitle>
             </Pressable>
           </SheetHeader>
 
-          <SearchInput />
+          <SearchInput value={query} onChangeText={setQuery} />
 
           <View className="flex-1 px-3">
             <FlashList
-              data={LIST_DATA}
+              data={data}
               renderItem={renderItem}
               keyExtractor={keyExtractor}
               getItemType={getItemType}

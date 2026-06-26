@@ -60,6 +60,12 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableOpenCLAndHexagon": false
+        }
       ]
     ],
     "experiments": {

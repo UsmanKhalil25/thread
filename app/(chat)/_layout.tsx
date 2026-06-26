@@ -58,7 +58,7 @@ export default function ChatLayout() {
   );
 
   return (
-    <ChatProvider>
+    <ChatProvider openModelPicker={openModelPicker}>
       <View className="flex-1">
         <Stack screenOptions={screenOptions} />
         <ChatHistoryDrawer

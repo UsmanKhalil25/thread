@@ -1,7 +1,7 @@
 import { db } from '@/db/client';
 import { modelDownloadsTable } from '@/db/schema';
 import type { ModelDownload, ModelDownloadStatus } from '@/types/entities/model-download';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 type ModelDownloadRow = typeof modelDownloadsTable.$inferSelect;
 
@@ -28,6 +28,16 @@ export async function listReadyModelIds(): Promise<string[]> {
     .where(eq(modelDownloadsTable.status, 'ready'));
 
   return rows.map((row) => row.modelId);
+}
+
+export async function getReadyModelPath(modelId: string): Promise<string | null> {
+  const rows = await db
+    .select({ filePath: modelDownloadsTable.filePath })
+    .from(modelDownloadsTable)
+    .where(and(eq(modelDownloadsTable.modelId, modelId), eq(modelDownloadsTable.status, 'ready')))
+    .limit(1);
+
+  return rows[0]?.filePath ?? null;
 }
 
 export async function upsertModelDownloadStatus(

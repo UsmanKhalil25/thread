@@ -31,8 +31,17 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+function formatSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(0)} KB/s`;
+  if (bytesPerSecond < 1024 * 1024 * 1024)
+    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
+  return `${(bytesPerSecond / (1024 * 1024 * 1024)).toFixed(2)} GB/s`;
+}
+
 export function DownloadableModel({ model, isLast }: DownloadableModelProps) {
-  const { status, downloadedBytes, totalBytes, start, cancel, remove } = useDownload(model.id);
+  const { status, downloadedBytes, totalBytes, speed, start, cancel, remove } = useDownload(
+    model.id
+  );
   const total = totalBytes && totalBytes > 0 ? totalBytes : model.sizeBytes;
   const progress = total > 0 ? Math.min(Math.round((downloadedBytes / total) * 100), 100) : 0;
 
@@ -108,8 +117,10 @@ export function DownloadableModel({ model, isLast }: DownloadableModelProps) {
         <View className="gap-1.5">
           <Progress value={progress} className="bg-border h-0.5" indicatorClassName="bg-blue-400" />
           <View className="flex-row items-center justify-between">
-            <Caption>{formatBytes(downloadedBytes)}</Caption>
-            <Caption>{formatBytes(total)}</Caption>
+            <Caption>{speed > 0 ? formatSpeed(speed) : '—'}</Caption>
+            <Caption>
+              {formatBytes(downloadedBytes)} / {formatBytes(total)}
+            </Caption>
           </View>
         </View>
       )}

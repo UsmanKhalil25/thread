@@ -2,8 +2,12 @@
 
 import journal from './meta/_journal.json';
 import m0000 from './0000_dark_goblin_queen.sql';
+import m0001 from './0001_curvy_prowler.sql';
 
 export default {
   journal,
-  migrations: { m0000 },
+  migrations: {
+    m0000,
+    m0001,
+  },
 };
