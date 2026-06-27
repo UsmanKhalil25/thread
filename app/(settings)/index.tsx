@@ -14,7 +14,6 @@ import { Text } from '@/components/ui/text';
 import { deleteAllChats } from '@/db/repositories/chats.repository';
 import { refreshChats } from '@/features/chat/hooks/use-chats';
 import { deleteAllModelDownloads } from '@/features/models/hooks/use-downloads';
-import { useDeviceCapability } from '@/features/models/hooks/use-device-capability';
 import { llamaService } from '@/features/inference/llama-service';
 import { MODEL_CATALOG } from '@/lib/models';
 import {
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Caption } from '@/components/ui/typography';
 import { useRouter } from 'expo-router';
-import { Database, Eye, Info, Smartphone, Trash2 } from 'lucide-react-native';
+import { Database, Eye, MessageSquareX } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -67,17 +66,20 @@ function AppearanceSelect() {
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { totalMemoryGB, tier, modelName } = useDeviceCapability();
-  const [eraseOpen, setEraseOpen] = useState(false);
-  const memoryLabel = totalMemoryGB ? `${Math.round(totalMemoryGB)} GB RAM` : 'RAM unavailable';
+  const [removeChatsOpen, setRemoveChatsOpen] = useState(false);
+  const [removeModelsOpen, setRemoveModelsOpen] = useState(false);
 
-  async function handleEraseAllData() {
-    await llamaService.release();
+  async function handleRemoveChats() {
     await deleteAllChats();
-    await deleteAllModelDownloads();
     void refreshChats();
-    setEraseOpen(false);
+    setRemoveChatsOpen(false);
     router.replace('/(chat)');
+  }
+
+  async function handleRemoveModels() {
+    await llamaService.release();
+    await deleteAllModelDownloads();
+    setRemoveModelsOpen(false);
   }
 
   return (
@@ -98,34 +100,21 @@ export default function SettingsScreen() {
             <SettingsRow icon={Eye} title="Appearance" control={<AppearanceSelect />} />
           </SettingsGroup>
 
-          <SettingsGroup label="Device">
-            <SettingsRow
-              icon={Smartphone}
-              title={modelName ?? 'Your device'}
-              hint={`${memoryLabel} · ${tier === 'any' ? 'Small models' : `${tier.toUpperCase()} tier`}`}
-              onPress={() => router.push('/(settings)/models')}
-              isFirst
-            />
-          </SettingsGroup>
-
           <SettingsGroup label="Data">
             <SettingsRow
-              icon={Trash2}
-              title="Erase all data"
-              hint="Chats and downloaded models"
+              icon={MessageSquareX}
+              title="Remove chats and messages"
+              hint="Delete conversation history"
               danger
               isFirst
-              onPress={() => setEraseOpen(true)}
+              onPress={() => setRemoveChatsOpen(true)}
             />
-          </SettingsGroup>
-
-          <SettingsGroup label="About">
             <SettingsRow
-              icon={Info}
-              title="Thread"
-              hint="Everything runs on-device. Nothing leaves your phone."
-              value="v0.4.1"
-              isFirst
+              icon={Database}
+              title="Remove all models"
+              hint="Delete downloaded model files"
+              danger
+              onPress={() => setRemoveModelsOpen(true)}
             />
           </SettingsGroup>
 
@@ -135,20 +124,40 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      <AlertDialog open={eraseOpen} onOpenChange={setEraseOpen}>
+      <AlertDialog open={removeChatsOpen} onOpenChange={setRemoveChatsOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Erase all data?</AlertDialogTitle>
+            <AlertDialogTitle>Remove chats and messages?</AlertDialogTitle>
             <AlertDialogDescription>
-              This deletes all chats and downloaded model files from this device.
+              This deletes all conversation history from this device.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
               <Text>Cancel</Text>
             </AlertDialogCancel>
-            <AlertDialogAction onPress={handleEraseAllData}>
-              <Text>Erase</Text>
+            <AlertDialogAction onPress={handleRemoveChats}>
+              <Text>Remove</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={removeModelsOpen} onOpenChange={setRemoveModelsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove all models?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes all downloaded model files from this device. You can download them again
+              later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              <Text>Cancel</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction onPress={handleRemoveModels}>
+              <Text>Remove</Text>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

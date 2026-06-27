@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "thread",
+    "name": "Thread",
     "slug": "thread",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#09090b"
       },
       "package": "com.anonymous.thread",
       "permissions": ["android.permission.POST_NOTIFICATIONS"]
