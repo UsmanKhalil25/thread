@@ -27,7 +27,7 @@ import { FlashList } from '@shopify/flash-list';
 import { ChevronRight, Pencil, Settings, Trash2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ChatRowItem = Chat & {
   time: string;
@@ -36,8 +36,6 @@ type ChatRowItem = Chat & {
 };
 
 type ListItem = { type: 'header'; label: string } | { type: 'chat'; chat: ChatRowItem };
-
-const EDGES = ['top', 'bottom'] as const;
 
 interface ChatHistoryDrawerProps {
   open: boolean;
@@ -204,6 +202,7 @@ export function ChatHistoryDrawer({
   onSelectChat,
   onSettings,
 }: ChatHistoryDrawerProps) {
+  const insets = useSafeAreaInsets();
   const { activeChatId, setActiveChatId } = useChat();
   const { chats, status, loadingMore } = useChats(open);
   const [query, setQuery] = useState('');
@@ -298,7 +297,7 @@ export function ChatHistoryDrawer({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="left">
-        <SafeAreaView edges={EDGES} style={{ flex: 1 }}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}>
           <SheetTitle className="absolute h-0 w-0 opacity-0">Chat history</SheetTitle>
           <SheetHeader className="flex-row items-center px-2 pb-2">
             <Button variant="ghost" size="icon" onPress={onClose}>
@@ -342,7 +341,7 @@ export function ChatHistoryDrawer({
               <Icon as={ChevronRight} className="text-muted-foreground size-4" />
             </Pressable>
           </SheetFooter>
-        </SafeAreaView>
+        </View>
       </SheetContent>
     </Sheet>
   );

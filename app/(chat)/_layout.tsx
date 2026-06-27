@@ -31,7 +31,10 @@ export default function ChatLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
 
-  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const openDrawer = useCallback(() => {
+    Keyboard.dismiss();
+    setDrawerOpen(true);
+  }, []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const openModelPicker = useCallback(() => {
     Keyboard.dismiss();

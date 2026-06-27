@@ -2,19 +2,17 @@ import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search-input';
 import { Caption } from '@/components/ui/typography';
 import { DownloadableModel } from '@/features/models/components/downloadable-model';
-import { useDeviceCapability } from '@/features/models/hooks/use-device-capability';
-import { MODEL_CATALOG, modelFitsDevice, modelHasCategory } from '@/lib/models';
+import { MODEL_CATALOG, MODEL_DEVELOPERS, modelDeveloper } from '@/lib/models';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const FILTERS = ['all', 'compatible', 'code'] as const;
+const FILTERS = ['all', ...MODEL_DEVELOPERS] as const;
 type ModelFilter = (typeof FILTERS)[number];
 
 export default function ModelsScreen() {
   const [activeFilter, setActiveFilter] = useState<ModelFilter>('all');
   const [query, setQuery] = useState('');
-  const { tier } = useDeviceCapability();
   const insets = useSafeAreaInsets();
 
   const filtered = MODEL_CATALOG.filter((model) => {
@@ -26,8 +24,7 @@ export default function ModelsScreen() {
 
     if (!matchesQuery) return false;
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'compatible') return modelFitsDevice(model, tier);
-    return modelHasCategory(model, activeFilter);
+    return modelDeveloper(model) === activeFilter;
   });
 
   return (
@@ -48,7 +45,7 @@ export default function ModelsScreen() {
               onPress={() => setActiveFilter(filter)}
               className={`h-8 rounded-md px-2.5 ${isActive ? 'bg-secondary' : ''}`}>
               <Caption className={isActive ? 'text-secondary-foreground' : undefined}>
-                {filter}
+                {filter === 'all' ? 'All' : filter}
               </Caption>
             </Button>
           );
