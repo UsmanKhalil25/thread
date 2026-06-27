@@ -4,6 +4,7 @@ import { ChatInput } from '@/features/chat/components/chat-input';
 import { MessageList } from '@/features/chat/components/message-list';
 import { useChatSession } from '@/features/chat/hooks/use-chat-session';
 import { useGreeting } from '@/features/chat/hooks/use-greeting';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,20 +50,52 @@ export default function NewChatScreen() {
   const insets = useSafeAreaInsets();
   const hasMessages = messages.length > 0;
 
+  // Keep the skeleton up until the list has actually rendered its first items,
+  // so the heavy initial markdown render happens behind the shimmer instead of a
+  // blank/black gap.
+  const [listReady, setListReady] = useState(false);
+  const readyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isLoadingMessages) setListReady(false);
+  }, [isLoadingMessages]);
+
+  const handleListReady = useCallback(() => {
+    if (readyTimer.current) clearTimeout(readyTimer.current);
+    setListReady(true);
+  }, []);
+
+  // Safety net: never leave the skeleton stuck if onLoad doesn't fire.
+  useEffect(() => {
+    if (isLoadingMessages || !hasMessages || listReady) return;
+    readyTimer.current = setTimeout(() => setListReady(true), 1500);
+    return () => {
+      if (readyTimer.current) clearTimeout(readyTimer.current);
+    };
+  }, [isLoadingMessages, hasMessages, listReady]);
+
   return (
     <View className="bg-background flex-1">
       {isLoadingMessages ? (
         <MessageListSkeleton />
       ) : hasMessages ? (
-        <MessageList
-          messages={messages}
-          isBusy={isGenerating}
-          onEdit={editAndRegenerate}
-          onRegenerate={regenerate}
-          thinkingLabel={thinkingLabel}
-          onLoadOlder={loadOlderMessages}
-          loadingOlder={loadingOlder}
-        />
+        <View className="flex-1">
+          <MessageList
+            messages={messages}
+            isBusy={isGenerating}
+            onEdit={editAndRegenerate}
+            onRegenerate={regenerate}
+            thinkingLabel={thinkingLabel}
+            onLoadOlder={loadOlderMessages}
+            loadingOlder={loadingOlder}
+            onReady={handleListReady}
+          />
+          {!listReady ? (
+            <View className="bg-background absolute inset-0">
+              <MessageListSkeleton />
+            </View>
+          ) : null}
+        </View>
       ) : (
         <View className="flex-1 justify-center gap-8 px-6">
           <View className="items-center gap-4">

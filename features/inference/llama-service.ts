@@ -86,7 +86,7 @@ class LlamaService {
     this.setStatus('generating');
 
     try {
-      const result = await this.context.completion({ n_predict: 512, ...params }, (data) => {
+      const result = await this.context.completion({ n_predict: -1, ...params }, (data) => {
         if (data.token) onToken(data.token);
       });
       return result;

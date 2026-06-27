@@ -248,7 +248,7 @@ async function streamAssistant(params: {
     const result = await llamaService.complete(
       {
         messages: buildMessages(params.history, params.nCtx),
-        n_predict: 512,
+        n_predict: -1,
       },
       (token) => {
         generation.content += token;
@@ -262,7 +262,10 @@ async function streamAssistant(params: {
     }
 
     const status = generation.stopped ? 'interrupted' : 'complete';
-    const finalContent = result.text || generation.content;
+    const finalContent =
+      result.text && result.text.length >= generation.content.length
+        ? result.text
+        : generation.content;
     const stats = generation.stopped
       ? { tokensPerSecond: undefined, tokenCount: undefined }
       : {

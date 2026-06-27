@@ -23,7 +23,7 @@ import { useChat } from '@/features/chat/contexts/chat-context';
 import { loadMoreChats, refreshChats, useChats } from '@/features/chat/hooks/use-chats';
 import type { Chat } from '@/types/entities/chat';
 import type { TriggerRef as PopoverTriggerRef } from '@rn-primitives/popover';
-import { FlashList } from '@shopify/flash-list';
+import { LegendList, type LegendListRenderItemProps } from '@legendapp/list/react-native';
 import { ChevronRight, Pencil, Settings, Trash2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -272,7 +272,7 @@ export function ChatHistoryDrawer({
   }, [activeChatId, chats, query]);
 
   const renderItem = useCallback(
-    ({ item }: { item: ListItem }) => {
+    ({ item }: LegendListRenderItemProps<ListItem>) => {
       if (item.type === 'header') return <SectionHeader label={item.label} />;
       return (
         <ChatRow
@@ -312,11 +312,12 @@ export function ChatHistoryDrawer({
               <ChatListSkeleton />
             ) : (
               <>
-                <FlashList
+                <LegendList
                   data={data}
                   renderItem={renderItem}
                   keyExtractor={keyExtractor}
                   getItemType={getItemType}
+                  estimatedItemSize={56}
                   showsVerticalScrollIndicator={false}
                   onLoad={() => setListDrawn(true)}
                   onEndReached={loadMoreChats}

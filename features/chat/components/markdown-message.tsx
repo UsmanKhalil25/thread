@@ -1,7 +1,7 @@
 import { CodeBlock } from '@/features/chat/components/code-block';
 import { THEME } from '@/lib/theme';
 import { lexer } from 'marked';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, type ReactElement } from 'react';
 import { View } from 'react-native';
 import { Renderer, type RendererInterface, useMarkdown } from 'react-native-marked';
 import remend from 'remend';
@@ -90,6 +90,26 @@ function buildStyles(t: ThemeTokens) {
 const MARKDOWN_THEME = { light: buildTheme(THEME.light), dark: buildTheme(THEME.dark) } as const;
 const MARKDOWN_STYLES = { light: buildStyles(THEME.light), dark: buildStyles(THEME.dark) } as const;
 
+// Cache of fully-rendered markdown trees for finalized messages, keyed by
+// content+scheme. List recycling re-mounts message cells constantly; without this,
+// every scroll re-parses the markdown (lexer + element build), which is the main
+// cause of jank. With it, a previously-rendered message reuses its element tree.
+const RENDERED_CACHE_LIMIT = 80;
+const renderedCache = new Map<string, ReactElement>();
+
+function renderedKey(content: string, scheme: 'light' | 'dark') {
+  return `${scheme}::${content}`;
+}
+
+function cacheRendered(key: string, node: ReactElement) {
+  if (renderedCache.has(key)) renderedCache.delete(key);
+  renderedCache.set(key, node);
+  if (renderedCache.size > RENDERED_CACHE_LIMIT) {
+    const oldest = renderedCache.keys().next().value;
+    if (oldest !== undefined) renderedCache.delete(oldest);
+  }
+}
+
 const MarkdownBlock = memo(function MarkdownBlock({
   source,
   scheme,
@@ -110,9 +130,9 @@ const MarkdownBlock = memo(function MarkdownBlock({
   return <>{elements}</>;
 });
 
-export function MarkdownMessage({ content, isStreaming = false }: MarkdownMessageProps) {
-  const { theme } = useUniwind();
-  const scheme = theme ?? 'light';
+// Live render for the in-progress message. Split into blocks so only the last
+// (incomplete) block is repaired with remend. Not cached — content changes per token.
+function StreamingMarkdown({ content, scheme }: { content: string; scheme: 'light' | 'dark' }) {
   const blocks = useMemo(() => lexer(content, { gfm: true }), [content]);
   const lastIndex = blocks.length - 1;
 
@@ -120,8 +140,7 @@ export function MarkdownMessage({ content, isStreaming = false }: MarkdownMessag
     <View style={{ width: '100%' }}>
       {blocks.map((token, i) => {
         if (token.type === 'space') return null;
-
-        const tail = isStreaming && i === lastIndex;
+        const tail = i === lastIndex;
 
         return (
           <MarkdownBlock
@@ -134,4 +153,40 @@ export function MarkdownMessage({ content, isStreaming = false }: MarkdownMessag
       })}
     </View>
   );
+}
+
+// Finalized render: build the element tree once, memoize it in the module cache, and
+// reuse it on subsequent renders/recycles so we never re-parse the same message.
+const RenderAndCacheMarkdown = memo(function RenderAndCacheMarkdown({
+  content,
+  scheme,
+  cacheId,
+}: {
+  content: string;
+  scheme: 'light' | 'dark';
+  cacheId: string;
+}) {
+  const renderer = useMemo(() => new ChatRenderer(scheme, false), [scheme]);
+  const elements = useMarkdown(content, {
+    colorScheme: scheme,
+    renderer,
+    theme: MARKDOWN_THEME[scheme],
+    styles: MARKDOWN_STYLES[scheme],
+  });
+  const node = <View style={{ width: '100%' }}>{elements}</View>;
+  cacheRendered(cacheId, node);
+  return node;
+});
+
+export function MarkdownMessage({ content, isStreaming = false }: MarkdownMessageProps) {
+  const { theme } = useUniwind();
+  const scheme = theme ?? 'light';
+
+  if (isStreaming) return <StreamingMarkdown content={content} scheme={scheme} />;
+
+  const cacheId = renderedKey(content, scheme);
+  const cached = renderedCache.get(cacheId);
+  if (cached) return cached;
+
+  return <RenderAndCacheMarkdown content={content} scheme={scheme} cacheId={cacheId} />;
 }

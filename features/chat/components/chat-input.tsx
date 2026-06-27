@@ -25,22 +25,30 @@ interface ChatInputProps extends TextInputProps {
 
 export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: ChatInputProps) {
   const { selectedModelId, retryLoad } = useChat();
-  const { send, stop } = useChatActions();
+  const { send, stop: stopGeneration } = useChatActions();
   const isGenerating = useIsGenerating();
   const isLoadingMessages = useIsLoadingMessages();
   const llamaStatus = useLlamaStatus();
   const downloads = useModelDownloads();
-  const speech = useSpeechToText();
+  const {
+    clear: clearSpeech,
+    error: speechError,
+    isListening: isSpeechListening,
+    stop: stopSpeech,
+    toggle: toggleSpeech,
+    transcript: speechTranscript,
+  } = useSpeechToText();
   const [text, setText] = useState('');
   const [isMultiline, setIsMultiline] = useState(false);
   const singleLineHeight = useRef(0);
   const speechBaseText = useRef('');
+  const speechSessionActive = useRef(false);
+  const trimmedText = text.trim();
   const selectedReady = selectedModelId ? downloads[selectedModelId]?.status === 'ready' : false;
   const canSend =
-    text.trim().length > 0 &&
+    trimmedText.length > 0 &&
     !isGenerating &&
     !isLoadingMessages &&
-    !speech.isListening &&
     selectedReady &&
     llamaStatus.status === 'ready' &&
     !!selectedModelId;
@@ -51,18 +59,20 @@ export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: Chat
     ? 'Select a model to start'
     : isModelLoading
       ? 'Loading model...'
-      : speech.isListening
+      : isSpeechListening
         ? 'Listening...'
         : 'Ask anything';
   const showModelError = !!selectedModelId && llamaStatus.status === 'error';
 
   useEffect(() => {
-    const transcript = speech.transcript.trim();
+    if (!speechSessionActive.current) return;
+
+    const transcript = speechTranscript.trim();
     if (!transcript) return;
 
     const base = speechBaseText.current.trimEnd();
     setText(base ? `${base} ${transcript}` : transcript);
-  }, [speech.transcript]);
+  }, [speechTranscript]);
 
   const handleContentSizeChange = useCallback(
     (e: TextInputContentSizeChangeEvent) => {
@@ -81,20 +91,22 @@ export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: Chat
 
   const handleSend = useCallback(() => {
     if (!canSend) return;
-    const content = text.trim();
+    speechSessionActive.current = false;
+    if (isSpeechListening) stopSpeech();
     setText('');
-    speech.clear();
+    clearSpeech();
     onSend?.();
-    void send(content);
-  }, [canSend, onSend, send, speech, text]);
+    void send(trimmedText);
+  }, [canSend, clearSpeech, isSpeechListening, onSend, send, stopSpeech, trimmedText]);
 
   const handleMic = useCallback(() => {
     onMic?.();
-    if (!speech.isListening) {
+    if (!isSpeechListening) {
       speechBaseText.current = text;
+      speechSessionActive.current = true;
     }
-    void speech.toggle();
-  }, [onMic, speech, text]);
+    void toggleSpeech();
+  }, [isSpeechListening, onMic, text, toggleSpeech]);
 
   return (
     <View className="px-6 pt-2 pb-2">
@@ -112,21 +124,21 @@ export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: Chat
       <View
         className={cn(
           'border-border bg-card gap-2 rounded-2xl border px-3 py-2.5',
-          speech.isListening && 'border-destructive/50'
+          isSpeechListening && 'border-destructive/50'
         )}>
-        {speech.isListening || speech.error ? (
+        {isSpeechListening || speechError ? (
           <View className="bg-secondary flex-row items-center gap-2 rounded-xl px-3 py-2">
             <View
-              className={cn('h-2 w-2 rounded-full', speech.error ? 'bg-destructive' : 'bg-red-500')}
+              className={cn('h-2 w-2 rounded-full', speechError ? 'bg-destructive' : 'bg-red-500')}
             />
             <Text className="text-muted-foreground flex-1 font-mono text-xs">
-              {speech.error ?? 'Listening for speech...'}
+              {speechError ?? 'Listening for speech...'}
             </Text>
-            {speech.error ? (
+            {speechError ? (
               <Button
                 variant="ghost"
                 size="icon"
-                onPress={speech.clear}
+                onPress={clearSpeech}
                 className="size-6 rounded-lg">
                 <Icon as={X} className="text-muted-foreground size-3.5" />
               </Button>
@@ -139,7 +151,7 @@ export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: Chat
             placeholder={placeholder}
             multiline
             value={text}
-            editable={!isGenerating && !isLoadingMessages && !speech.isListening}
+            editable={!isGenerating && !isLoadingMessages && !isSpeechListening}
             onChangeText={setText}
             className="max-h-[120px]"
             onContentSizeChange={handleContentSizeChange}
@@ -151,16 +163,16 @@ export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: Chat
               size="icon"
               onPress={handleMic}
               disabled={isGenerating || isLoadingMessages}
-              className={cn('h-8 w-8 rounded-xl', speech.isListening && 'bg-destructive/10')}>
+              className={cn('h-8 w-8 rounded-xl', isSpeechListening && 'bg-destructive/10')}>
               <Icon
-                as={speech.isListening ? Square : Mic}
-                className={speech.isListening ? 'text-destructive' : 'text-muted-foreground'}
+                as={isSpeechListening ? Square : Mic}
+                className={isSpeechListening ? 'text-destructive' : 'text-muted-foreground'}
               />
             </Button>
             <Button
               variant="default"
               size="icon"
-              onPress={isGenerating ? stop : handleSend}
+              onPress={isGenerating ? stopGeneration : handleSend}
               disabled={!isGenerating && !canSend}
               className="bg-foreground h-8 w-8 rounded-xl">
               <Icon as={isGenerating ? Square : ArrowUp} className="text-background" />

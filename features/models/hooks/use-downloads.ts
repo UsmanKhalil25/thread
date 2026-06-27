@@ -28,9 +28,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { PermissionsAndroid, Platform } from 'react-native';
 
 const MAX_CONCURRENT = 1;
+const WATCHDOG_TICK_MS = 4000;
+const STALL_TIMEOUT_MS = 15000;
+const MAX_RECONNECTS = 6;
+const ERROR_BACKOFF_MS = 2000;
 const GGUF_MAGIC_BASE64 = 'R0dVRg==';
 const IDLE_DOWNLOAD = { status: 'idle' as const, downloadedBytes: 0 };
 const catalogById = new Map(MODEL_CATALOG.map((model) => [model.id, model]));
+
+interface WatchEntry {
+  lastBytes: number;
+  lastChangeAt: number;
+  reconnects: number;
+  recovering: boolean;
+}
 
 setConfig({
   progressInterval: 1000,
@@ -64,6 +75,9 @@ const store = {
 const listeners = new Set<() => void>();
 const activeDownloads = new Map<string, DownloadTask>();
 const cancelledTaskIds = new Set<string>();
+const ignoredTasks = new WeakSet<DownloadTask>();
+const watch = new Map<string, WatchEntry>();
+let watchTimer: ReturnType<typeof setInterval> | null = null;
 
 function fileUri(path: string): string {
   const uri = path.startsWith('file://') ? path : `file://${path}`;
@@ -124,6 +138,125 @@ function getDownloadSnapshot(modelId: string) {
   return store.downloads[modelId] ?? IDLE_DOWNLOAD;
 }
 
+function hasActiveDownload(): boolean {
+  return Object.values(store.downloads).some((download) => download.status === 'downloading');
+}
+
+function ensureWatchdog() {
+  if (watchTimer) return;
+  watchTimer = setInterval(tickWatchdog, WATCHDOG_TICK_MS);
+}
+
+function stopWatchdog() {
+  if (!watchTimer) return;
+  clearInterval(watchTimer);
+  watchTimer = null;
+}
+
+function stopWatchdogIfIdle() {
+  if (hasActiveDownload() || !watchTimer) return;
+  stopWatchdog();
+}
+
+function noteProgress(modelId: string, bytes: number) {
+  const now = Date.now();
+  const entry = watch.get(modelId);
+
+  if (!entry) {
+    watch.set(modelId, {
+      lastBytes: bytes,
+      lastChangeAt: now,
+      reconnects: 0,
+      recovering: false,
+    });
+    return;
+  }
+
+  if (bytes > entry.lastBytes) {
+    entry.lastBytes = bytes;
+    entry.lastChangeAt = now;
+    entry.reconnects = 0;
+  }
+}
+
+function clearWatch(modelId: string) {
+  watch.delete(modelId);
+  stopWatchdogIfIdle();
+}
+
+function tickWatchdog() {
+  const now = Date.now();
+
+  for (const [modelId, download] of Object.entries(store.downloads)) {
+    if (download.status !== 'downloading') {
+      watch.delete(modelId);
+      continue;
+    }
+
+    const entry = watch.get(modelId);
+
+    if (!entry) {
+      watch.set(modelId, {
+        lastBytes: download.downloadedBytes,
+        lastChangeAt: now,
+        reconnects: 0,
+        recovering: false,
+      });
+      continue;
+    }
+
+    if (download.downloadedBytes > entry.lastBytes) {
+      entry.lastBytes = download.downloadedBytes;
+      entry.lastChangeAt = now;
+      entry.reconnects = 0;
+      continue;
+    }
+
+    if (entry.recovering) continue;
+    if (now - entry.lastChangeAt >= STALL_TIMEOUT_MS) void reconnectStalled(modelId);
+  }
+
+  stopWatchdogIfIdle();
+}
+
+async function reconnectStalled(modelId: string) {
+  const entry = watch.get(modelId);
+  const model = catalogById.get(modelId);
+  if (!entry || !model || store.downloads[modelId]?.status !== 'downloading') return;
+
+  const task = activeDownloads.get(modelId);
+
+  if (entry.reconnects >= MAX_RECONNECTS) {
+    if (task) {
+      ignoredTasks.add(task);
+      activeDownloads.delete(modelId);
+      await task.stop().catch(() => {});
+      await finishBackgroundTask(task.id);
+    }
+
+    await failDownload(model, store.downloads[modelId]?.downloadedBytes ?? 0);
+    runNextDownload();
+    return;
+  }
+
+  entry.recovering = true;
+  entry.reconnects += 1;
+  entry.lastChangeAt = Date.now();
+
+  try {
+    if (task) {
+      await task.pause().catch(() => {});
+      await task.resume();
+    } else {
+      const part = await getInfoAsync(tempPath(model)).catch(() => null);
+      await resumeDownload(model, part?.exists ? part.size : 0);
+    }
+  } catch {
+  } finally {
+    entry.recovering = false;
+  }
+}
+
 async function ensureModelDirectories() {
   await makeDirectoryAsync(modelsDir(), { intermediates: true }).catch(() => {});
   await makeDirectoryAsync(tempDir(), { intermediates: true }).catch(() => {});
@@ -145,6 +278,7 @@ async function failDownload(model: CatalogModel, downloadedBytes = 0) {
   await deleteAsync(tempPath(model), { idempotent: true }).catch(() => {});
   await markModelDownloadFailed(model.id);
   setDownload(model.id, { status: 'failed', downloadedBytes });
+  clearWatch(model.id);
 }
 
 async function isValidGgufFile(source: string): Promise<boolean> {
@@ -189,14 +323,22 @@ function attachHandlers(task: DownloadTask, model: CatalogModel) {
 
   task
     .begin(() => {
+      if (ignoredTasks.has(task)) return;
+
+      const downloadedBytes = task.bytesDownloaded ?? lastPersistedBytes;
+      noteProgress(model.id, downloadedBytes);
+      ensureWatchdog();
       setDownload(model.id, {
         status: 'downloading',
-        downloadedBytes: task.bytesDownloaded ?? lastPersistedBytes,
+        downloadedBytes,
         totalBytes: task.bytesTotal || undefined,
       });
       void upsertModelDownloadStatus(model.id, 'downloading', lastPersistedBytes, task.id);
     })
     .progress(({ bytesDownloaded, bytesTotal }) => {
+      if (ignoredTasks.has(task)) return;
+
+      noteProgress(model.id, bytesDownloaded);
       setDownload(model.id, {
         status: 'downloading',
         downloadedBytes: bytesDownloaded,
@@ -210,6 +352,11 @@ function attachHandlers(task: DownloadTask, model: CatalogModel) {
     })
     .done(({ location, bytesDownloaded }) => {
       void (async () => {
+        if (ignoredTasks.has(task)) {
+          await finishBackgroundTask(task.id);
+          return;
+        }
+
         try {
           await completeDownload(model, location, bytesDownloaded);
         } catch {
@@ -217,6 +364,7 @@ function attachHandlers(task: DownloadTask, model: CatalogModel) {
         } finally {
           activeDownloads.delete(model.id);
           cancelledTaskIds.delete(model.id);
+          clearWatch(model.id);
           await finishBackgroundTask(task.id);
           runNextDownload();
         }
@@ -224,16 +372,44 @@ function attachHandlers(task: DownloadTask, model: CatalogModel) {
     })
     .error(() => {
       void (async () => {
+        if (ignoredTasks.has(task)) {
+          await finishBackgroundTask(task.id);
+          return;
+        }
+
         activeDownloads.delete(model.id);
 
         if (cancelledTaskIds.has(model.id)) {
           await deleteAsync(tempPath(model), { idempotent: true }).catch(() => {});
           await deleteModelDownload(model.id);
           removeDownload(model.id);
-        } else {
-          await failDownload(model, lastPersistedBytes);
+          clearWatch(model.id);
+          await finishBackgroundTask(task.id);
+          runNextDownload();
+          return;
         }
 
+        const entry = watch.get(model.id) ?? {
+          lastBytes: lastPersistedBytes,
+          lastChangeAt: Date.now(),
+          reconnects: 0,
+          recovering: false,
+        };
+        watch.set(model.id, entry);
+
+        if (entry.reconnects < MAX_RECONNECTS) {
+          entry.reconnects += 1;
+          entry.lastChangeAt = Date.now();
+          await finishBackgroundTask(task.id);
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.min(ERROR_BACKOFF_MS * entry.reconnects, 10000))
+          );
+          const part = await getInfoAsync(tempPath(model)).catch(() => null);
+          await resumeDownload(model, part?.exists ? part.size : 0);
+          return;
+        }
+
+        await failDownload(model, lastPersistedBytes);
         await finishBackgroundTask(task.id);
         runNextDownload();
       })();
@@ -347,6 +523,7 @@ async function initializeModelDownloads(): Promise<void> {
     store.downloads = next;
     store.initialized = true;
     store.initializing = null;
+    if (hasActiveDownload()) ensureWatchdog();
     emit();
   })();
 
@@ -395,6 +572,8 @@ async function runDownload(model: CatalogModel) {
   attachHandlers(task, model);
   await upsertModelDownloadStatus(model.id, 'downloading', 0, task.id);
   setDownload(model.id, { status: 'downloading', downloadedBytes: 0 });
+  noteProgress(model.id, 0);
+  ensureWatchdog();
   task.start();
 }
 
@@ -417,6 +596,8 @@ async function resumeDownload(model: CatalogModel, fromBytes: number) {
   attachHandlers(task, model);
   await upsertModelDownloadStatus(model.id, 'downloading', fromBytes, task.id);
   setDownload(model.id, { status: 'downloading', downloadedBytes: fromBytes });
+  noteProgress(model.id, fromBytes);
+  ensureWatchdog();
   task.start();
 }
 
@@ -452,6 +633,7 @@ export async function cancelModelDownload(modelId: string): Promise<void> {
     if (model) await deleteAsync(tempPath(model), { idempotent: true }).catch(() => {});
     await deleteModelDownload(modelId);
     removeDownload(modelId);
+    clearWatch(modelId);
     runNextDownload();
     return;
   }
@@ -459,6 +641,7 @@ export async function cancelModelDownload(modelId: string): Promise<void> {
   store.queue = store.queue.filter((id) => id !== modelId);
   await deleteModelDownload(modelId);
   removeDownload(modelId);
+  clearWatch(modelId);
 }
 
 export async function deleteReadyModel(modelId: string): Promise<void> {
@@ -471,6 +654,7 @@ export async function deleteReadyModel(modelId: string): Promise<void> {
   await deleteAsync(current.filePath ?? finalPath(model), { idempotent: true }).catch(() => {});
   await deleteModelDownload(modelId);
   removeDownload(modelId);
+  clearWatch(modelId);
 }
 
 export async function deleteAllModelDownloads(): Promise<void> {
@@ -482,6 +666,7 @@ export async function deleteAllModelDownloads(): Promise<void> {
   }
 
   activeDownloads.clear();
+  watch.clear();
   store.queue = [];
 
   for (const model of MODEL_CATALOG) {
@@ -492,6 +677,7 @@ export async function deleteAllModelDownloads(): Promise<void> {
   }
 
   store.downloads = {};
+  stopWatchdog();
   emit();
 }
 
@@ -513,8 +699,6 @@ export function useDownload(modelId: string) {
     () => getDownloadSnapshot(modelId)
   );
 
-  // Smoothed download speed (bytes/sec), derived from the running byte count.
-  // Sampled once per second so it reads steadily instead of jumping per event.
   const active = download.status === 'downloading';
   const bytesRef = useRef(download.downloadedBytes);
   bytesRef.current = download.downloadedBytes;

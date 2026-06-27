@@ -41,6 +41,7 @@ export function useSpeechToText() {
 
   useSpeechRecognitionEvent('result', (event) => {
     setTranscript(event.results[0]?.transcript ?? '');
+    if (event.isFinal) setIsListening(false);
   });
 
   useSpeechRecognitionEvent('error', (event) => {
@@ -75,6 +76,7 @@ export function useSpeechToText() {
   }, []);
 
   const stop = useCallback(() => {
+    setIsListening(false);
     ExpoSpeechRecognitionModule.stop();
   }, []);
 
