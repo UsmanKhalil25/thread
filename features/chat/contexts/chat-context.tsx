@@ -1,5 +1,6 @@
 import { getChat, setChatModel } from '@/db/repositories/chats.repository';
 import { getReadyModelPath } from '@/db/repositories/model-downloads.repository';
+import { interruptGeneration } from '@/features/chat/hooks/use-chat-session';
 import { refreshChats } from '@/features/chat/hooks/use-chats';
 import { llamaService } from '@/features/inference/llama-service';
 import { MODEL_CATALOG } from '@/lib/models';
@@ -42,7 +43,7 @@ export function ChatProvider({ children, openModelPicker }: ChatProviderProps) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeChatId || llamaService.getStatus().status === 'generating') return;
+    if (!activeChatId) return;
 
     void (async () => {
       const chat = await getChat(activeChatId);
@@ -57,8 +58,6 @@ export function ChatProvider({ children, openModelPicker }: ChatProviderProps) {
 
   const selectModel = useCallback(
     (modelId: string) => {
-      if (llamaService.getStatus().status === 'generating') return;
-
       setSelectedModelId(modelId);
       if (activeChatId) {
         void setChatModel(activeChatId, modelId);
@@ -74,8 +73,14 @@ export function ChatProvider({ children, openModelPicker }: ChatProviderProps) {
     let cancelled = false;
 
     if (!selectedModelId) {
-      void llamaService.release();
-      return;
+      void (async () => {
+        await interruptGeneration();
+        if (!cancelled) await llamaService.release();
+      })();
+
+      return () => {
+        cancelled = true;
+      };
     }
 
     void (async () => {
@@ -84,10 +89,14 @@ export function ChatProvider({ children, openModelPicker }: ChatProviderProps) {
       if (cancelled) return;
 
       if (!model || !path) {
+        await interruptGeneration();
+        if (cancelled) return;
         await llamaService.release();
         return;
       }
 
+      await interruptGeneration();
+      if (cancelled) return;
       await llamaService.load(model, path).catch(() => {});
     })();
 

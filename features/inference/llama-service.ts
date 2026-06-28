@@ -17,6 +17,7 @@ export type LlamaStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'unloadi
 export interface LlamaStatusSnapshot {
   status: LlamaStatus;
   modelId: string | null;
+  warm: boolean;
   error?: string;
 }
 
@@ -27,14 +28,28 @@ class LlamaService {
   private modelId: string | null = null;
   private status: LlamaStatus = 'idle';
   private error: string | undefined;
-  private snapshot: LlamaStatusSnapshot = { status: 'idle', modelId: null };
+  private warm = false;
+  private snapshot: LlamaStatusSnapshot = { status: 'idle', modelId: null, warm: false };
   private loadToken = 0;
   private generating = false;
+  private backgroundReleaseTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<Listener>();
 
   constructor() {
     AppState.addEventListener('change', (state) => {
-      if (state === 'background') void this.release();
+      if (state === 'background') {
+        if (this.backgroundReleaseTimer) clearTimeout(this.backgroundReleaseTimer);
+        this.backgroundReleaseTimer = setTimeout(() => {
+          this.backgroundReleaseTimer = null;
+          void this.release();
+        }, 15000);
+        return;
+      }
+
+      if (state === 'active' && this.backgroundReleaseTimer) {
+        clearTimeout(this.backgroundReleaseTimer);
+        this.backgroundReleaseTimer = null;
+      }
     });
   }
 
@@ -82,17 +97,22 @@ class LlamaService {
     if (!this.context) throw new Error('No model loaded');
     if (this.generating) throw new Error('Generation already in progress');
 
+    const context = this.context;
+    const token = this.loadToken;
     this.generating = true;
     this.setStatus('generating');
 
     try {
-      const result = await this.context.completion({ n_predict: -1, ...params }, (data) => {
+      const result = await context.completion({ n_predict: -1, ...params }, (data) => {
         if (data.token) onToken(data.token);
       });
       return result;
     } finally {
-      this.generating = false;
-      if (this.status === 'generating') this.setStatus('ready');
+      if (token === this.loadToken) {
+        this.warm = true;
+        this.generating = false;
+        if (this.status === 'generating') this.setStatus('ready');
+      }
     }
   }
 
@@ -102,9 +122,14 @@ class LlamaService {
   }
 
   async release(): Promise<void> {
-    this.loadToken += 1;
+    const token = ++this.loadToken;
+    if (this.backgroundReleaseTimer) {
+      clearTimeout(this.backgroundReleaseTimer);
+      this.backgroundReleaseTimer = null;
+    }
     if (this.context) this.setStatus('unloading');
     await this.disposeContext();
+    if (token !== this.loadToken) return;
     this.error = undefined;
     if (this.status !== 'idle') this.setStatus('idle');
   }
@@ -127,20 +152,27 @@ class LlamaService {
 
     this.context = ctx;
     this.modelId = model.id;
+    this.warm = false;
     if (token === this.loadToken) this.setStatus('ready');
   }
 
   private async disposeContext(): Promise<void> {
-    if (!this.context) {
+    const context = this.context;
+    if (!context) {
       this.modelId = null;
+      this.warm = false;
+      this.generating = false;
       return;
     }
 
-    await this.stop();
-    await this.context.release().catch(() => {});
+    const wasGenerating = this.generating;
     this.context = null;
     this.modelId = null;
+    this.warm = false;
     this.generating = false;
+
+    if (wasGenerating) await context.stopCompletion().catch(() => {});
+    await context.release().catch(() => {});
   }
 
   private setStatus(status: LlamaStatus, error?: string | null) {
@@ -149,6 +181,7 @@ class LlamaService {
     this.snapshot = {
       status: this.status,
       modelId: this.modelId,
+      warm: this.warm,
       error: this.error,
     };
     this.emit();

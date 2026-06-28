@@ -1,7 +1,7 @@
 import { OnboardingButton } from '@/features/onboarding/components/onboarding-button';
 import { Icon } from '@/components/ui/icon';
 import { RowTitle, ScreenTitle, Subtitle } from '@/components/ui/typography';
-import { Archive, Laptop, Lock, Shield } from 'lucide-react-native';
+import { Laptop, MessageSquareX, Shield, WifiOff } from 'lucide-react-native';
 import { ScrollView, View } from 'react-native';
 
 const FEATURES = [
@@ -11,9 +11,9 @@ const FEATURES = [
     subtitle: 'All tokens generated on this device.',
   },
   {
-    icon: Lock,
-    title: 'Encrypted at rest',
-    subtitle: 'AES-GCM, key in Secure Enclave.',
+    icon: WifiOff,
+    title: 'Works offline',
+    subtitle: 'Downloaded models run without a connection.',
   },
   {
     icon: Shield,
@@ -21,9 +21,9 @@ const FEATURES = [
     subtitle: 'Crash reports opt-in, scrubbed.',
   },
   {
-    icon: Archive,
-    title: 'Export & wipe anytime',
-    subtitle: 'JSONL, Markdown or full archive.',
+    icon: MessageSquareX,
+    title: 'Delete history anytime',
+    subtitle: 'Remove chats and messages from settings.',
   },
 ];
 
@@ -59,7 +59,7 @@ export default function PrivacyScreen() {
         <View className="gap-6">
           <View className="gap-2">
             <ScreenTitle>Your chats never leave the device.</ScreenTitle>
-            <Subtitle>Models run locally, embeddings stay local, your data is yours.</Subtitle>
+            <Subtitle>Models run locally, conversations stay local, your data is yours.</Subtitle>
           </View>
 
           <View className="gap-3 pt-2">

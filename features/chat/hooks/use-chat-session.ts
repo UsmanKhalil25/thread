@@ -96,6 +96,8 @@ function titleFromText(text: string): string {
 
 async function loadChatMessages(chatId: string | null) {
   loadingChatId = chatId;
+  await interruptGeneration();
+  if (loadingChatId !== chatId) return;
 
   if (!chatId) {
     setSnapshot({
@@ -170,7 +172,7 @@ async function loadOlderMessages() {
   }
 }
 
-async function interruptActiveGeneration() {
+export async function interruptGeneration() {
   const generation = activeGeneration;
   if (generation) {
     generation.stopped = true;
@@ -493,7 +495,7 @@ export function useChatActions() {
   );
 
   const stop = useCallback(async () => {
-    await interruptActiveGeneration();
+    await interruptGeneration();
   }, []);
 
   return useMemo(
@@ -524,13 +526,18 @@ export function useChatSession() {
   const { activeChatId } = useChat();
   const session = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const actions = useChatActions();
+  const llamaStatus = useLlamaStatus();
 
   useEffect(() => {
     if (activeChatId === session.chatId) return;
     void loadChatMessages(activeChatId);
   }, [activeChatId, session.chatId]);
 
-  const thinkingLabel = session.titlePhase ? 'Generating title for chat' : 'Thinking';
+  const thinkingLabel = session.titlePhase
+    ? 'Generating title for chat'
+    : llamaStatus.warm
+      ? 'Thinking'
+      : 'Warming up…';
 
   return useMemo(
     () => ({ ...session, ...actions, loadOlderMessages, thinkingLabel }),

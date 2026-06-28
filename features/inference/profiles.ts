@@ -24,9 +24,9 @@ export function profileForModel(model: CatalogModel): RuntimeProfile {
   const b = paramsToB(model.params);
   const base = {
     n_threads: 4,
-    n_batch: 256,
-    n_ubatch: 128,
-    n_gpu_layers: 0,
+    n_batch: 512,
+    n_ubatch: 512,
+    n_gpu_layers: 99,
     flash_attn_type: 'on',
     use_mmap: true,
     use_mlock: false,
@@ -36,7 +36,6 @@ export function profileForModel(model: CatalogModel): RuntimeProfile {
     return {
       ...base,
       n_ctx: 4096,
-      n_batch: 512,
       cache_type_k: 'q8_0',
       cache_type_v: 'q8_0',
     };
@@ -53,6 +52,9 @@ export function degradedProfileForModel(model: CatalogModel): RuntimeProfile {
   const profile = profileForModel(model);
   return {
     ...profile,
+    n_gpu_layers: 0,
+    n_batch: 256,
+    n_ubatch: 128,
     n_ctx: Math.max(Math.floor((profile.n_ctx ?? 2048) / 2), 1024),
     cache_type_k: 'q4_0',
     cache_type_v: 'q4_0',
