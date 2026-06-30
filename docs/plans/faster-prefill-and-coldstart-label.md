@@ -44,9 +44,9 @@ still load.
 ```ts
 const base = {
   n_threads: 4,
-  n_batch: 512,        // was 256 — bigger prefill batch
-  n_ubatch: 512,       // was 128 — bigger micro-batch
-  n_gpu_layers: 99,    // was 0 — offload all layers (clamps to the model's real layer count)
+  n_batch: 512, // was 256 — bigger prefill batch
+  n_ubatch: 512, // was 128 — bigger micro-batch
+  n_gpu_layers: 99, // was 0 — offload all layers (clamps to the model's real layer count)
   flash_attn_type: 'on',
   use_mmap: true,
   use_mlock: false,
@@ -64,7 +64,7 @@ export function degradedProfileForModel(model: CatalogModel): RuntimeProfile {
   const profile = profileForModel(model);
   return {
     ...profile,
-    n_gpu_layers: 0,   // CPU-only fallback for devices without usable GPU offload
+    n_gpu_layers: 0, // CPU-only fallback for devices without usable GPU offload
     n_batch: 256,
     n_ubatch: 128,
     n_ctx: Math.max(Math.floor((profile.n_ctx ?? 2048) / 2), 1024),
@@ -131,7 +131,7 @@ this.snapshot = {
 ```ts
 this.context = ctx;
 this.modelId = model.id;
-this.warm = false;            // fresh context: KV cache is cold
+this.warm = false; // fresh context: KV cache is cold
 if (token === this.loadToken) this.setStatus('ready');
 ```
 
@@ -190,6 +190,7 @@ export function useChatSession() {
 ```
 
 Behavior:
+
 - **Resumed chat, cold model** (the slow case): `warm` is `false` → bubble shows **"Warming up…"**
   during the prefill, then switches to streamed content as tokens arrive.
 - **After the first response**: `warm` is `true` → later turns show **"Thinking"** as before.

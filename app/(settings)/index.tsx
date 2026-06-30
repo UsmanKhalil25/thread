@@ -24,11 +24,22 @@ import {
   SelectValue,
   type Option,
 } from '@/components/ui/select';
+import { Icon } from '@/components/ui/icon';
 import { Caption } from '@/components/ui/typography';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { Database, Eye, MessageSquareX } from 'lucide-react-native';
+import {
+  Database,
+  Eye,
+  Heart,
+  MessageSquareX,
+  Moon,
+  Sparkles,
+  Star,
+  Zap,
+} from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Uniwind, useUniwind } from 'uniwind';
 
@@ -63,11 +74,15 @@ function AppearanceSelect() {
   );
 }
 
+const VERSION_ICONS = [Sparkles, Heart, Zap, Moon, Star];
+
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [removeChatsOpen, setRemoveChatsOpen] = useState(false);
   const [removeModelsOpen, setRemoveModelsOpen] = useState(false);
+  const [iconIndex, setIconIndex] = useState(0);
+  const VersionIcon = VERSION_ICONS[iconIndex];
 
   async function handleRemoveChats() {
     await deleteAllChats();
@@ -118,9 +133,15 @@ export default function SettingsScreen() {
             />
           </SettingsGroup>
 
-          <Caption className="text-muted-foreground/50 text-center">
-            v0.4.1 · llama.cpp · open source
-          </Caption>
+          <Pressable
+            onPress={() => setIconIndex((i) => (i + 1) % VERSION_ICONS.length)}
+            hitSlop={8}
+            className="flex-row items-center justify-center gap-1.5">
+            <Icon as={VersionIcon} className="text-muted-foreground/50 size-3" />
+            <Caption className="text-muted-foreground/50 text-center">
+              v{Constants.expoConfig?.version}
+            </Caption>
+          </Pressable>
         </View>
       </ScrollView>
 
