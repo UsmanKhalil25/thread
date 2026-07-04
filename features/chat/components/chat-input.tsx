@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { ArrowUp, Mic, Square, TriangleAlert, X } from 'lucide-react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { View, type TextInputContentSizeChangeEvent, type TextInputProps } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface ChatInputProps extends TextInputProps {
@@ -24,6 +25,7 @@ interface ChatInputProps extends TextInputProps {
 }
 
 export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: ChatInputProps) {
+  const insets = useSafeAreaInsets();
   const { selectedModelId, retryLoad } = useChat();
   const { send, stop: stopGeneration } = useChatActions();
   const isGenerating = useIsGenerating();
@@ -109,7 +111,7 @@ export function ChatInput({ onSend, onMic, onContentSizeChange, ...props }: Chat
   }, [isSpeechListening, onMic, text, toggleSpeech]);
 
   return (
-    <View className="px-6 pt-2 pb-2">
+    <View className="px-6 pt-2" style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
       {showModelError ? (
         <Alert variant="destructive" icon={TriangleAlert} className="mb-2">
           <AlertTitle>Model failed to load</AlertTitle>

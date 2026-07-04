@@ -107,7 +107,7 @@ export default function NewChatScreen() {
         </View>
       )}
 
-      <KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>
+      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         <ChatInput />
       </KeyboardStickyView>
     </View>

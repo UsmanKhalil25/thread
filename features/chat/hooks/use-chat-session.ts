@@ -28,6 +28,7 @@ interface ChatSessionSnapshot {
   messages: Message[];
   isGenerating: boolean;
   titlePhase: boolean;
+  warmupPhase: boolean;
   isLoadingMessages: boolean;
   hasOlder: boolean;
   loadingOlder: boolean;
@@ -51,6 +52,7 @@ const EMPTY_SNAPSHOT: ChatSessionSnapshot = {
   messages: [],
   isGenerating: false,
   titlePhase: false,
+  warmupPhase: false,
   isLoadingMessages: false,
   hasOlder: false,
   loadingOlder: false,
@@ -61,6 +63,7 @@ let snapshot = EMPTY_SNAPSHOT;
 let loadingChatId: string | null = null;
 let activeGeneration: ActiveGeneration | null = null;
 let pendingTitleTurn: PendingTitleTurn | null = null;
+let warmContextChatId: string | null = null;
 
 function emit() {
   for (const listener of listeners) listener();
@@ -105,6 +108,7 @@ async function loadChatMessages(chatId: string | null) {
       messages: [],
       isGenerating: false,
       titlePhase: false,
+      warmupPhase: false,
       isLoadingMessages: false,
       hasOlder: false,
       loadingOlder: false,
@@ -117,6 +121,7 @@ async function loadChatMessages(chatId: string | null) {
     messages: [],
     isGenerating: activeGeneration !== null || pendingTitleTurn !== null,
     titlePhase: false,
+    warmupPhase: false,
     isLoadingMessages: true,
     hasOlder: false,
     loadingOlder: false,
@@ -132,6 +137,7 @@ async function loadChatMessages(chatId: string | null) {
       pendingTitleTurn !== null ||
       page.items.some((message) => message.status === 'generating'),
     titlePhase: false,
+    warmupPhase: false,
     isLoadingMessages: false,
     hasOlder: page.hasOlder,
     loadingOlder: false,
@@ -191,7 +197,7 @@ export async function interruptGeneration() {
       status: 'interrupted',
     });
     activeGeneration = null;
-    setSnapshot({ isGenerating: false, titlePhase: false });
+    setSnapshot({ isGenerating: false, titlePhase: false, warmupPhase: false });
     return;
   }
 
@@ -217,7 +223,6 @@ async function beginAssistantTurn(params: {
     chatId: params.chatId,
     messages: [...params.history, assistantMessage],
     isGenerating: true,
-    titlePhase: false,
     isLoadingMessages: false,
   });
 
@@ -287,6 +292,7 @@ async function streamAssistant(params: {
       status,
       ...stats,
     });
+    warmContextChatId = params.chatId;
     void refreshChats();
   } catch {
     const status = generation.stopped ? 'interrupted' : 'error';
@@ -297,7 +303,7 @@ async function streamAssistant(params: {
     patchMessage(params.assistantId, { content: generation.content, status });
   } finally {
     if (activeGeneration?.assistantId === params.assistantId) activeGeneration = null;
-    setSnapshot({ isGenerating: false, titlePhase: false });
+    setSnapshot({ isGenerating: false, titlePhase: false, warmupPhase: false });
   }
 }
 
@@ -352,11 +358,15 @@ export function useChatActions() {
       });
 
       const history = [...baseMessages, userMessage];
+      const willGenerateTitle = !chat.title;
+      const needsWarmup =
+        baseMessages.length > 0 && (!llamaStatus.warm || warmContextChatId !== chat.id);
       setSnapshot({
         chatId: chat.id,
         messages: history,
         isGenerating: true,
-        titlePhase: false,
+        titlePhase: willGenerateTitle,
+        warmupPhase: needsWarmup,
         isLoadingMessages: false,
         hasOlder,
         loadingOlder: false,
@@ -389,7 +399,7 @@ export function useChatActions() {
         if (stopped) {
           await finalizeMessage(assistantId, { content: '', status: 'interrupted' });
           patchMessage(assistantId, { content: '', status: 'interrupted' });
-          setSnapshot({ isGenerating: false, titlePhase: false });
+          setSnapshot({ isGenerating: false, titlePhase: false, warmupPhase: false });
           return;
         }
       }
@@ -402,7 +412,7 @@ export function useChatActions() {
         nCtx: profileForModel(model).n_ctx ?? 2048,
       });
     },
-    [activeChatId, llamaStatus.status, selectedModelId, setActiveChatId]
+    [activeChatId, llamaStatus.status, llamaStatus.warm, selectedModelId, setActiveChatId]
   );
 
   const editAndRegenerate = useCallback(
@@ -433,7 +443,7 @@ export function useChatActions() {
 
       await updateMessageContent(messageId, content);
       await deleteMessages(removed.map((message) => message.id));
-      setSnapshot({ messages: history, isGenerating: true, titlePhase: false });
+      setSnapshot({ messages: history, isGenerating: true, titlePhase: false, warmupPhase: false });
 
       const assistantId = await beginAssistantTurn({
         chatId,
@@ -476,7 +486,7 @@ export function useChatActions() {
 
       const removed = snapshot.messages.slice(idx);
       await deleteMessages(removed.map((message) => message.id));
-      setSnapshot({ messages: history, isGenerating: true, titlePhase: false });
+      setSnapshot({ messages: history, isGenerating: true, titlePhase: false, warmupPhase: false });
 
       const assistantId = await beginAssistantTurn({
         chatId,
@@ -526,7 +536,6 @@ export function useChatSession() {
   const { activeChatId } = useChat();
   const session = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const actions = useChatActions();
-  const llamaStatus = useLlamaStatus();
 
   useEffect(() => {
     if (activeChatId === session.chatId) return;
@@ -535,9 +544,9 @@ export function useChatSession() {
 
   const thinkingLabel = session.titlePhase
     ? 'Generating title for chat'
-    : llamaStatus.warm
-      ? 'Thinking'
-      : 'Warming up…';
+    : session.warmupPhase
+      ? 'Warming up…'
+      : 'Thinking';
 
   return useMemo(
     () => ({ ...session, ...actions, loadOlderMessages, thinkingLabel }),
