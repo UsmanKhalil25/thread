@@ -5,13 +5,13 @@ export { type DeviceTier, type ModelCategory, type CatalogModel } from '@/types/
 
 export const MODEL_CATALOG: CatalogModel[] = CatalogModelsSchema.parse(modelsJson);
 
-export const MODEL_DEVELOPERS = ['Meta', 'Google', 'Qwen', 'Microsoft', 'Hugging Face'] as const;
+export const MODEL_DEVELOPERS = ['Meta', 'Google', 'Alibaba', 'Microsoft', 'Hugging Face'] as const;
 export type ModelDeveloper = (typeof MODEL_DEVELOPERS)[number];
 
 const FAMILY_DEVELOPER: Record<string, ModelDeveloper> = {
   llama: 'Meta',
   gemma: 'Google',
-  qwen: 'Qwen',
+  qwen: 'Alibaba',
   phi: 'Microsoft',
   smollm: 'Hugging Face',
 };
