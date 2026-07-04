@@ -1,5 +1,5 @@
 diff --git a/android/src/main/java/com/eko/uidt/UIDTNotificationManager.kt b/android/src/main/java/com/eko/uidt/UIDTNotificationManager.kt
-index 0401372..5330101 100644
+index 0401372..f90edea 100644
 --- a/android/src/main/java/com/eko/uidt/UIDTNotificationManager.kt
 +++ b/android/src/main/java/com/eko/uidt/UIDTNotificationManager.kt
 @@ -3,8 +3,11 @@ package com.eko.uidt
@@ -14,10 +14,22 @@ index 0401372..5330101 100644
  import android.os.Build
  import androidx.annotation.RequiresApi
  import androidx.core.app.NotificationCompat
-@@ -22,6 +25,19 @@ object UIDTNotificationManager {
+@@ -22,6 +25,31 @@ object UIDTNotificationManager {
      private val config: NotificationConfig
          get() = UIDTJobRegistry.notificationConfig
  
++    private fun formatBytes(bytes: Long): String {
++        if (bytes <= 0L) return "0 KB"
++        val kb = 1024.0
++        val mb = kb * 1024
++        val gb = mb * 1024
++        return when {
++            bytes < mb -> "${(bytes / kb).toInt()} KB"
++            bytes < gb -> String.format("%.1f MB", bytes / mb)
++            else -> String.format("%.2f GB", bytes / gb)
++        }
++    }
++
 +    private fun buildContentIntent(context: Context, notificationId: Int): PendingIntent {
 +        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("thread://models")).apply {
 +            setPackage(context.packageName)
@@ -34,7 +46,7 @@ index 0401372..5330101 100644
      /**
       * Generate a stable notification ID for a configId.
       * This ensures the same download always uses the same notification ID,
-@@ -139,6 +155,7 @@ object UIDTNotificationManager {
+@@ -139,6 +167,7 @@ object UIDTNotificationManager {
              .setOnlyAlertOnce(true)
              .setShowWhen(false)
              .setProgress(0, 0, true)
@@ -42,7 +54,21 @@ index 0401372..5330101 100644
  
          // Apply grouping when enabled and groupId is provided
          if (config.groupingEnabled && groupId.isNotEmpty()) {
-@@ -190,6 +207,7 @@ object UIDTNotificationManager {
+@@ -179,7 +208,12 @@ object UIDTNotificationManager {
+             config.getText("downloadTitle")
+         }
+ 
+-        val progressText = config.getText("downloadProgress", "progress" to progress)
++        val progressText = config.getText(
++            "downloadProgress",
++            "progress" to progress,
++            "downloaded" to formatBytes(bytesDownloaded),
++            "total" to if (bytesTotal > 0) formatBytes(bytesTotal) else "?"
++        )
+ 
+         val builder = NotificationCompat.Builder(context, UIDTConstants.NOTIFICATION_CHANNEL_ID)
+             .setContentTitle(title)
+@@ -190,6 +224,7 @@ object UIDTNotificationManager {
              .setOnlyAlertOnce(true)
              .setShowWhen(false)
              .setProgress(100, progress, bytesTotal <= 0)
@@ -50,7 +76,7 @@ index 0401372..5330101 100644
  
          // Apply grouping when enabled
          if (config.groupingEnabled && jobState.groupId.isNotEmpty()) {
-@@ -227,6 +245,7 @@ object UIDTNotificationManager {
+@@ -227,6 +262,7 @@ object UIDTNotificationManager {
              .setOnlyAlertOnce(true)
              .setShowWhen(false)
              .setProgress(100, progress, false)
@@ -58,7 +84,22 @@ index 0401372..5330101 100644
              .build()
  
          val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-@@ -264,6 +283,7 @@ object UIDTNotificationManager {
+@@ -257,13 +293,21 @@ object UIDTNotificationManager {
+ 
+         val builder = NotificationCompat.Builder(context, UIDTConstants.NOTIFICATION_CHANNEL_ID)
+             .setContentTitle(title)
+-            .setContentText(config.getText("downloadProgress", "progress" to progress))
++            .setContentText(
++                config.getText(
++                    "downloadProgress",
++                    "progress" to progress,
++                    "downloaded" to formatBytes(bytesDownloaded),
++                    "total" to if (bytesTotal > 0) formatBytes(bytesTotal) else "?"
++                )
++            )
+             .setSmallIcon(android.R.drawable.stat_sys_download)
+             .setPriority(NotificationCompat.PRIORITY_LOW)
+             .setOngoing(true)
              .setOnlyAlertOnce(true)
              .setShowWhen(false)
              .setProgress(100, progress, bytesTotal <= 0)
@@ -66,7 +107,7 @@ index 0401372..5330101 100644
  
          val notification = builder.build()
  
-@@ -341,6 +361,7 @@ object UIDTNotificationManager {
+@@ -341,6 +385,7 @@ object UIDTNotificationManager {
              .setOngoing(true)
              .setOnlyAlertOnce(true)
              .setShowWhen(false)
@@ -74,7 +115,7 @@ index 0401372..5330101 100644
              .build()
  
          notificationManager.notify(summaryNotificationId, summaryNotification)
-@@ -421,6 +442,7 @@ object UIDTNotificationManager {
+@@ -421,6 +466,7 @@ object UIDTNotificationManager {
              .setOnlyAlertOnce(true)
              .setShowWhen(false)
              .setProgress(100, progress, indeterminate)

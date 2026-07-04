@@ -52,6 +52,7 @@ setConfig({
       downloadTitle: 'Model download',
       groupTitle: 'Model downloads',
       groupText: '{count} model downloads in progress',
+      downloadProgress: '{downloaded} / {total} · {progress}%',
     },
   },
 });
@@ -565,7 +566,7 @@ async function runDownload(model: CatalogModel) {
     maxRedirects: 10,
     metadata: {
       groupId: 'model-downloads',
-      groupName: 'Model downloads',
+      groupName: model.name,
     },
   });
 
@@ -589,7 +590,7 @@ async function resumeDownload(model: CatalogModel, fromBytes: number) {
     maxRedirects: 10,
     metadata: {
       groupId: 'model-downloads',
-      groupName: 'Model downloads',
+      groupName: model.name,
     },
   });
 
