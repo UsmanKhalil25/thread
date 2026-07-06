@@ -10,14 +10,14 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.thread"
+      "bundleIdentifier": "com.usmankhalil.thread"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#09090b"
       },
-      "package": "com.anonymous.thread",
+      "package": "com.usmankhalil.thread",
       "permissions": ["android.permission.POST_NOTIFICATIONS"]
     },
     "web": {
